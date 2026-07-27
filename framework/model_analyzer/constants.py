@@ -6,3 +6,17 @@ SOURCE_WEIGHTS = {
     "requirements" : 6,
     "readme" : 5
 }
+
+FRAMEWORK_MAP = {
+    "torch" : ("framework", "PyTorch"),
+    "torchvision" : ("framework", "PyTorch"),
+    "tensorflow" : ("framework", "TensorFlow"),
+    "keras" : ("framework", "Keras"),
+
+    "scikit-learn" : ("framework", "Scikit-Learn"),
+    "sklearn" : ("framework", "Scikit-Learn"),
+    "xgboost" : ("framework", "XGBoost"),
+
+    "timm" : ("framework", "PyTorch"),
+    "transformers" : ("framework", "HuggingFace/Pytorch")
+}
