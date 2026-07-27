@@ -1,21 +1,7 @@
 from pathlib import Path
 from analyzer import evidences
-from constants import SOURCE_WEIGHTS
+import constants
 
-REQUIREMENTS_MAP = {
-    "torch" : ("framework", "PyTorch"),
-    "torchvision" : ("framework", "PyTorch"),
-    "tensorflow" : ("framework", "TensorFlow"),
-    "keras" : ("framework", "Keras"),
-
-    "scikit-learn" : ("framework", "Scikit-Learn"),
-    "sklearn" : ("framework", "Scikit-Learn"),
-    "xgboost" : ("framework", "XGBoost"),
-
-    "tim" : ("framework", "PyTorch"),
-    "transformers" : ("framework", "HuggingFace/Pytorch"),
-
-}
 
 def clean_package(line):
     line = line.strip()
@@ -36,9 +22,10 @@ with requirements.open() as content:
     for line in lines:
         package = clean_package(line)
 
-        category, value = REQUIREMENTS_MAP(package)
-        evidences[category].append({
-                                        "value" : value,
-                                        "source" : "requirements",
-                                        "weight" : SOURCE_WEIGHTS("requirements")
-                                    })
+        if package in constants.FRAMEWORK_MAP:
+            category, value = constants.FRAMEWORK_MAP[package]
+            evidences[category].append({
+                                            "value" : value,
+                                            "source" : "requirements",
+                                            "weight" : constants.SOURCE_WEIGHTS["requirements"]
+                                        })
