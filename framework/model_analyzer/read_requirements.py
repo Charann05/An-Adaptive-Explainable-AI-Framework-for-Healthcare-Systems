@@ -1,6 +1,6 @@
-from pathlib import Path
-from analyzer import evidences
+import os
 import constants
+from pathlib import Path
 
 
 def clean_package(line):
@@ -14,18 +14,26 @@ def clean_package(line):
             line = line.split(sep)[0]
     return line
 
-requirements = Path("requirements.txt")
+def scan_requirements(MODEL_FOLDER, evidences, file_info):
+    print("Scannig requirement files...")
+    for file in file_info:
 
-with requirements.open() as content:
-    lines = content.readlines()
+        if file["name"] == "requirements.txt" and file["extension"] == ".txt":
 
-    for line in lines:
-        package = clean_package(line)
+            requirements = Path(MODEL_FOLDER) / file["name"]
 
-        if package in constants.FRAMEWORK_MAP:
-            category, value = constants.FRAMEWORK_MAP[package]
-            evidences[category].append({
-                                            "value" : value,
-                                            "source" : "requirements",
-                                            "weight" : constants.SOURCE_WEIGHTS["requirements"]
-                                        })
+            if not os.path.exists(requirements):
+                return
+
+            with open(requirements, "r", encoding="utf-8") as lines:
+
+                for line in lines:
+                    package = clean_package(line)
+
+                    if package in constants.FRAMEWORK_MAP:
+                        category, value = constants.FRAMEWORK_MAP[package]
+                        evidences[category].append({
+                                                        "value" : value,
+                                                        "source" : "requirements",
+                                                        "weight" : constants.SOURCE_WEIGHTS["requirements"]
+                                                    })

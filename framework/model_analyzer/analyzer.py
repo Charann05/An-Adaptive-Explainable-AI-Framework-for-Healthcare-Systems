@@ -1,3 +1,22 @@
-import evidence
+from pathlib import Path
 
-evidences = evidence.create_evidence_store() 
+from evidence import create_evidence_store
+from load_model_files import load_files
+from classify_file_type import get_file_info
+from read_config import scan_config
+from read_requirements import scan_requirements
+from read_source import scan_file
+
+evidences = create_evidence_store() 
+
+MODEL_FOLDER, files = load_files()
+print(files)
+
+file_info = get_file_info(MODEL_FOLDER, files)
+
+scan_config(MODEL_FOLDER, evidences, file_info)
+scan_requirements(MODEL_FOLDER, evidences, file_info)
+scan_file(MODEL_FOLDER, evidences, file_info)
+
+print(evidences)
+print("\nFile Info :\n ",file_info)

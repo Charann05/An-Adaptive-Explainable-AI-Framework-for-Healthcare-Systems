@@ -1,19 +1,27 @@
 import ast
 from pathlib import Path
-from load_model_files import MODEL_FOLDER
-from analyzer import evidences
 import constants
 
-files = list(Path(MODEL_FOLDER).rglob("*.py"))
+# files = list(Path(MODEL_FOLDER).rglob("*.py"))
 
 
-def scan_file(file, evidences):
+def scan_file(MODEL_FOLDER, evidences, file_info):
+    print("Scannig source files...")
+    for file in file_info:
+        if file["extension"] != ".py":
+            continue
 
+        file_path = Path(MODEL_FOLDER) / file["name"]
+        print("Scanning file:", file_path)
+        scan_single_file(file_path, evidences)
+
+def scan_single_file(file,evidences):
     try:
         with open(file, 'r', encoding="UTF-8") as content:
             tree = ast.parse(content.read(), filename=file)
 
-    except Exception:
+    except Exception as e:
+        print("Error while parsing", file, ":", e)
         return
 
     for node in ast.walk(tree):
@@ -77,6 +85,6 @@ def scan_file(file, evidences):
                         "weight" : constants.SOURCE_WEIGHTS["python"]                       
                     })               
 
-for file in files:
-    scan_file(file, evidences)
+# for file in files:
+#     scan_file(file, evidences)
 

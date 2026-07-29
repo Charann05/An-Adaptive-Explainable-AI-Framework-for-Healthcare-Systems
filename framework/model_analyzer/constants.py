@@ -8,17 +8,17 @@ SOURCE_WEIGHTS = {
 }
 
 FRAMEWORK_MAP = {
-    "torch" : ("framework", "PyTorch"),
-    "torchvision" : ("framework", "PyTorch"),
-    "tensorflow" : ("framework", "TensorFlow"),
-    "keras" : ("framework", "Keras"),
+    "torch": "PyTorch",
+    "torchvision": "PyTorch",
+    "tensorflow": "TensorFlow",
+    "keras": "Keras",
 
-    "scikit-learn" : ("framework", "Scikit-Learn"),
-    "sklearn" : ("framework", "Scikit-Learn"),
-    "xgboost" : ("framework", "XGBoost"),
+    "scikit-learn": "Scikit-Learn",
+    "sklearn": "Scikit-Learn",
+    "xgboost": "XGBoost",
 
-    "timm" : ("framework", "PyTorch"),
-    "transformers" : ("framework", "HuggingFace/Pytorch")
+    "timm": "PyTorch",
+    "transformers": "HuggingFace/PyTorch"
 }
 
 ARCHITECTURE_MAP = {
