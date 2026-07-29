@@ -2,89 +2,290 @@ import ast
 from pathlib import Path
 import constants
 
-# files = list(Path(MODEL_FOLDER).rglob("*.py"))
-
 
 def scan_file(MODEL_FOLDER, evidences, file_info):
-    print("Scannig source files...")
+    print("Scanning source files...")
+
     for file in file_info:
+
         if file["extension"] != ".py":
             continue
 
         file_path = Path(MODEL_FOLDER) / file["name"]
         print("Scanning file:", file_path)
+
         scan_single_file(file_path, evidences)
 
-def scan_single_file(file,evidences):
+
+def scan_single_file(file, evidences):
+
     try:
-        with open(file, 'r', encoding="UTF-8") as content:
-            tree = ast.parse(content.read(), filename=file)
+        with open(file, "r", encoding="utf-8") as f:
+            tree = ast.parse(f.read(), filename=str(file))
 
     except Exception as e:
-        print("Error while parsing", file, ":", e)
+        print(f"Error while parsing {file}: {e}")
         return
 
+    # --------------------------------------------------
+    # Pass 1 : Collect variables
+    # --------------------------------------------------
+
+    variables = {}
+
     for node in ast.walk(tree):
-        # print(type(node))
+        if isinstance(node, ast.Assign):
+            if isinstance(node.value, ast.Constant):
+
+                for target in node.targets:
+
+                    if isinstance(target, ast.Name):
+                        variables[target.id] = node.value.value
+
+        elif isinstance(node, ast.FunctionDef):
+            args = node.args.args
+            defaults = node.args.defaults
+            offset = len(args) - len(defaults)
+
+            for arg, default in zip(args[offset:], defaults):
+
+                if isinstance(default, ast.Constant):
+                    variables[arg.arg] = default.value
+
+    print("Variables:", variables)
+
+    # --------------------------------------------------
+    # Pass 2 : Detect evidences
+    # --------------------------------------------------
+
+    for node in ast.walk(tree):
+
+        # ---------------- IMPORT ----------------
+
         if isinstance(node, ast.Import):
+
             for module in node.names:
-                if module.name in constants.FRAMEWORK_MAP:
+                framework = module.name.split(".")[0].lower()
+                if framework in constants.FRAMEWORK_MAP:
+
                     evidences["framework"].append({
-                        "value" : constants.FRAMEWORK_MAP[module.name],
-                        "source" : "python",
-                        "weight" : constants.SOURCE_WEIGHTS["python"]
+                        "value": constants.FRAMEWORK_MAP[framework],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
                     })
 
-    # for node in ast.walk(tree):
+        # ------------- IMPORT FROM -------------
+
         elif isinstance(node, ast.ImportFrom):
 
-            # Detect framework from the module being imported from
-            if node.module in constants.FRAMEWORK_MAP:
-                evidences["framework"].append({
-                    "value": constants.FRAMEWORK_MAP[node.module],
-                    "source": "python",
-                    "weight": constants.SOURCE_WEIGHTS["python"]
-                })
+            if node.module:
+                framework = node.module.split(".")[0].lower()
+                if framework in constants.FRAMEWORK_MAP:
 
-            # Detect framework/architecture from imported names
-            for module in node.names:
-                if module.name in constants.FRAMEWORK_MAP:
                     evidences["framework"].append({
-                        "value": constants.FRAMEWORK_MAP[module.name],
+                        "value": constants.FRAMEWORK_MAP[framework],
                         "source": "python",
                         "weight": constants.SOURCE_WEIGHTS["python"]
                     })
 
-                if module.name in constants.ARCHITECTURE_MAP:
+            for module in node.names:
+                name = module.name.lower()
+                if name in constants.FRAMEWORK_MAP:
+
+                    evidences["framework"].append({
+                        "value": constants.FRAMEWORK_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
+                if name in constants.ARCHITECTURE_MAP:
+
                     evidences["architecture"].append({
-                        "value": constants.ARCHITECTURE_MAP[module.name],
+                        "value": constants.ARCHITECTURE_MAP[name],
                         "source": "python",
                         "weight": constants.SOURCE_WEIGHTS["python"]
                     })
 
-    # print("Functions Calls")
-    # for node in ast.walk(tree):
+        # ---------------- CALL ----------------
+
         elif isinstance(node, ast.Call):
+
+            # ------------------------------------
+            # Detect architecture by constructor
+            # ------------------------------------
+
             if isinstance(node.func, ast.Name):
-                if node.func.id in constants.ARCHITECTURE_MAP:
+
+                name = node.func.id.lower()
+                if name in constants.ARCHITECTURE_MAP:
                     evidences["architecture"].append({
-                        "value" : constants.ARCHITECTURE_MAP[node.func.id],
-                        "source" : "python",
-                        "weight" : constants.SOURCE_WEIGHTS["python"]                       
+                        "value": constants.ARCHITECTURE_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
                     })
 
-    # print("Attribute Function Call")
-    # for node in ast.walk(tree):
-        # elif isinstance(node, ast.Call):
+                # <<< NEW >>> Optimizer
+                if name in constants.OPTIMIZER_MAP:
+                    evidences["optimizer"].append({
+                        "value": constants.OPTIMIZER_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
+                # <<< NEW >>> Loss Function
+                if name in constants.LOSS_FUNCTION_MAP:
+                    evidences["loss_function"].append({
+                        "value": constants.LOSS_FUNCTION_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
             elif isinstance(node.func, ast.Attribute):
-                # print(node.func.attr)
-                if node.func.attr in constants.ARCHITECTURE_MAP:
+                name = node.func.attr.lower()
+                if name in constants.ARCHITECTURE_MAP:
+
                     evidences["architecture"].append({
-                        "value" : constants.ARCHITECTURE_MAP[node.func.attr],
-                        "source" : "python",
-                        "weight" : constants.SOURCE_WEIGHTS["python"]                       
-                    })               
+                        "value": constants.ARCHITECTURE_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
 
-# for file in files:
-#     scan_file(file, evidences)
+                # <<< NEW >>> Optimizer
+                if name in constants.OPTIMIZER_MAP:
 
+                    evidences["optimizer"].append({
+                        "value": constants.OPTIMIZER_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
+                # <<< NEW >>> Loss Function
+                if name in constants.LOSS_FUNCTION_MAP:
+
+                    evidences["loss_function"].append({
+                        "value": constants.LOSS_FUNCTION_MAP[name],
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
+            # ------------------------------------
+            # Detect architecture from arguments
+            # ------------------------------------
+
+            for arg in node.args:
+                model_name = None
+
+                if (
+                    isinstance(arg, ast.Constant)
+                    and isinstance(arg.value, str)
+                ):
+                    model_name = arg.value
+
+                elif isinstance(arg, ast.Name):
+                    value = variables.get(arg.id)
+
+                    if isinstance(value, str):
+                        model_name = value
+
+                if model_name:
+                    model_name = model_name.lower()
+                    for architecture in sorted(
+                        constants.ARCHITECTURE_MAP.keys(),
+                        key=len,
+                        reverse=True
+                    ):
+
+                        if architecture in model_name:
+                            evidences["architecture"].append({
+                                "value": constants.ARCHITECTURE_MAP[architecture],
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"]
+                            })
+
+                            break
+
+            # ------------------------------------
+            # Detect num_classes
+            # ------------------------------------
+
+            for keyword in node.keywords:
+                if keyword.arg not in constants.CLASS_PARAMETER_NAMES:
+                    continue
+                num_classes = None
+
+                if (
+                    isinstance(keyword.value, ast.Constant)
+                    and isinstance(keyword.value.value, int)
+                ):
+                    num_classes = keyword.value.value
+
+                elif isinstance(keyword.value, ast.Name):
+                    value = variables.get(keyword.value.id)
+
+                    if isinstance(value, int):
+                        num_classes = value
+
+                if num_classes is not None:
+                    evidences["num_classes"].append({
+                        "value": num_classes,
+                        "source": "python",
+                        "weight": constants.SOURCE_WEIGHTS["python"]
+                    })
+
+             # ------------------------------------
+            # Detect optimizer and loss
+            # ------------------------------------
+
+            for keyword in node.keywords:
+
+                # -------- Optimizer --------
+
+                if keyword.arg in constants.OPTIMIZER_PARAMETER_NAMES:
+                    optimizer = None
+                    # optimizer="adam"
+                    if (
+                        isinstance(keyword.value, ast.Constant)
+                        and isinstance(keyword.value.value, str)
+                    ):
+                        optimizer = keyword.value.value
+
+                    # optimizer=optimizer_name
+                    elif isinstance(keyword.value, ast.Name):
+                        value = variables.get(keyword.value.id)
+                        if isinstance(value, str):
+                            optimizer = value
+
+                    if optimizer:
+                        optimizer = optimizer.lower()
+                        if optimizer in constants.OPTIMIZER_MAP:
+                            evidences["optimizer"].append({
+                                "value": constants.OPTIMIZER_MAP[optimizer],
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"]
+                            })
+
+                # -------- Loss Function --------
+
+                elif keyword.arg in constants.LOSS_PARAMETER_NAMES:
+                    loss = None
+                    # loss="cross_entropy"
+                    if (
+                        isinstance(keyword.value, ast.Constant)
+                        and isinstance(keyword.value.value, str)
+                    ):
+                        loss = keyword.value.value
+
+                    # loss=loss_name
+                    elif isinstance(keyword.value, ast.Name):
+                        value = variables.get(keyword.value.id)
+                        if isinstance(value, str):
+                            loss = value
+
+                    if loss:
+                        loss = loss.lower()
+                        if loss in constants.LOSS_FUNCTION_MAP:
+                            evidences["loss_function"].append({
+                                "value": constants.LOSS_FUNCTION_MAP[loss],
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"]
+                            })

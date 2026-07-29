@@ -6,6 +6,10 @@ from classify_file_type import get_file_info
 from read_config import scan_config
 from read_requirements import scan_requirements
 from read_source import scan_file
+from read_input_type import detect_input_type
+from evidence_reducer import reduce_evidence
+from evidence_ranker import rank_evidence
+from report_generator import generate_report
 
 evidences = create_evidence_store() 
 
@@ -17,6 +21,17 @@ file_info = get_file_info(MODEL_FOLDER, files)
 scan_config(MODEL_FOLDER, evidences, file_info)
 scan_requirements(MODEL_FOLDER, evidences, file_info)
 scan_file(MODEL_FOLDER, evidences, file_info)
+detect_input_type(MODEL_FOLDER, evidences, file_info)
 
-print(evidences)
-print("\nFile Info :\n ",file_info)
+print("Evidences found :\n ", evidences)
+
+evidences = reduce_evidence(evidences)
+print("Reduced Evidences : ", evidences)
+
+final_evidence = rank_evidence(evidences)
+
+print("Final Evidence:")
+print(final_evidence)
+
+generate_report(final_evidence)
+# print("\nFile Info :\n ",file_info)

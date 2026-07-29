@@ -122,3 +122,101 @@ ARCHITECTURE_MAP = {
     "linear regression": "Linear Regression",
     "ols": "Linear Regression"
 }
+
+CLASS_PARAMETER_NAMES = {
+    "num_classes",
+    "n_classes",
+    "classes",
+    "num_labels",
+    "n_labels",
+}
+
+OPTIMIZER_MAP = {
+    "adam": "Adam",
+    "adamw": "AdamW",
+    "sgd": "SGD",
+    "rmsprop": "RMSprop",
+    "adagrad": "Adagrad",
+    "adadelta": "Adadelta",
+    "adamax": "Adamax",
+    "nadam": "NAdam",
+    "lbfgs": "LBFGS"
+}
+
+LOSS_FUNCTION_MAP = {
+    "crossentropyloss": "CrossEntropyLoss",
+    "cross_entropy": "CrossEntropyLoss",
+    "bcewithlogitsloss": "BCEWithLogitsLoss",
+    "bceloss": "BCELoss",
+    "binary_crossentropy": "BinaryCrossentropy",
+    "categoricalcrossentropy": "CategoricalCrossentropy",
+    "categorical_crossentropy": "CategoricalCrossentropy",
+    "mseloss": "MSELoss",
+    "mse_loss": "MSELoss",
+    "l1loss": "L1Loss",
+    "smoothl1loss": "SmoothL1Loss",
+    "nllloss": "NLLLoss",
+    "ctcloss": "CTCLoss"
+}
+
+OPTIMIZER_PARAMETER_NAMES = {
+    "optimizer",
+}
+
+LOSS_PARAMETER_NAMES = {
+    "loss",
+    "loss_fn",
+    "loss_function",
+    "criterion"
+}
+
+INPUT_PATTERNS = {
+
+    # Image
+    "imagefolder": "Image",
+    "image.open": "Image",
+    "pil.image.open": "Image",
+    "cv2.imread": "Image",
+    "transforms": "Image",
+    "albumentations": "Image",
+
+    # Text
+    "tokenizer": "Text",
+    "berttokenizer": "Text",
+    "autotokenizer": "Text",
+
+    # Tabular
+    "read_csv": "Tabular",
+    "read_excel": "Tabular",
+
+    # Medical Images
+    "nib.load": "3D Medical Image",
+    "pydicom.dcmread": "DICOM Image"
+}
+
+IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+    ".tif",
+    ".tiff"
+}
+
+TABULAR_EXTENSIONS = {
+    ".csv",
+    ".xls",
+    ".xlsx"
+}
+
+TEXT_EXTENSIONS = {
+    ".txt",
+    ".json"
+}
+
+MEDICAL_EXTENSIONS = {
+    ".nii",
+    ".nii.gz",
+    ".dcm"
+}
+

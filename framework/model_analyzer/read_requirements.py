@@ -31,8 +31,8 @@ def scan_requirements(MODEL_FOLDER, evidences, file_info):
                     package = clean_package(line)
 
                     if package in constants.FRAMEWORK_MAP:
-                        category, value = constants.FRAMEWORK_MAP[package]
-                        evidences[category].append({
+                        value = constants.FRAMEWORK_MAP[package]
+                        evidences["framework"].append({
                                                         "value" : value,
                                                         "source" : "requirements",
                                                         "weight" : constants.SOURCE_WEIGHTS["requirements"]

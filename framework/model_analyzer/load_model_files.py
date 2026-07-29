@@ -1,20 +1,17 @@
-import os
 from pathlib import Path
-from classify_file_type import get_file_info
 
 def load_files():
-    print("Loading file...")
-    MODEL_FOLDER = "../source_model"
 
-    files = os.listdir(MODEL_FOLDER)
+    print("Loading files...")
+    MODEL_FOLDER = Path("../source_model")
+    files = []
 
-    # print("=" *50)
-    print("\nFiles Found")
-    # print("=" *50)
+    for file in MODEL_FOLDER.rglob("*"):
+        if file.is_file():
+            files.append(str(file.relative_to(MODEL_FOLDER)))
 
-    # for file in files:
-    #     print(file)
-    # print(Path(MODEL_FOLDER))
-    # get_file_info(MODEL_FOLDER, files)
-    return Path(MODEL_FOLDER), files
-# load_files()
+    print("Files Found")
+    for file in files:
+        print(file)
+
+    return MODEL_FOLDER, files
