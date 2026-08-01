@@ -1,0 +1,10 @@
+MODEL ANALYSIS REPORT
+==================================================
+Generated At: 2026-07-30 20:34:57.538703
+
+Framework: PyTorch (100.0%)
+Architecture: EfficientNet-B0 (70.0%)
+Num_classes: 5 (70.0%)
+Optimizer: Adam (70.0%)
+Loss_function: CrossEntropyLoss (70.0%)
+Input_type: Image (70.0%)
