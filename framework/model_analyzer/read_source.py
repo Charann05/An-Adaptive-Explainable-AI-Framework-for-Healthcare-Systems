@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
 import constants
-import os
+from collections import Counter
 from read_notebook import get_notebook_trees
 
 def scan_file(MODEL_FOLDER, evidences, file_info):
@@ -16,6 +16,8 @@ def scan_file(MODEL_FOLDER, evidences, file_info):
         scan_single_file(file_path, evidences)
 
 def scan_single_file(file, evidences):
+    family_counter = Counter()
+
     try:
         if file.suffix == ".py":
             with open(file, "r", encoding="utf-8") as f:
@@ -65,6 +67,21 @@ def scan_single_file(file, evidences):
     for tree in trees:
         for node in ast.walk(tree):
 
+            if isinstance(node, ast.ClassDef):
+                class_name = node.name.lower()
+
+                if "cnn" in class_name:
+                    family_counter["Custom CNN"] += 3
+
+                elif "rnn" in class_name or "lstm" in class_name or "gru" in class_name:
+                    family_counter["Custom RNN"] += 3
+
+                elif "transformer" in class_name:
+                    family_counter["Custom Transformer"] += 3
+
+                elif "gan" in class_name:
+                    family_counter["GAN"] += 3
+
             # ---------------- IMPORT ----------------
 
             if isinstance(node, ast.Import):
@@ -84,6 +101,13 @@ def scan_single_file(file, evidences):
             elif isinstance(node, ast.ImportFrom):
 
                 if node.module:
+                    module = node.module.lower()
+                    if "torch_geometric" in module:
+                        family_counter["Graph Neural Network"] += 2
+
+                    elif "transformers" in module:
+                        family_counter["Custom Transformer"] += 2
+
                     framework = node.module.split(".")[0].lower()
                     if framework in constants.FRAMEWORK_MAP:
 
@@ -95,8 +119,8 @@ def scan_single_file(file, evidences):
 
                 for module in node.names:
                     name = module.name.lower()
-                    if name in constants.FRAMEWORK_MAP:
 
+                    if name in constants.FRAMEWORK_MAP:
                         evidences["framework"].append({
                             "value": constants.FRAMEWORK_MAP[name],
                             "source": "python",
@@ -104,7 +128,6 @@ def scan_single_file(file, evidences):
                         })
 
                     if name in constants.ARCHITECTURE_MAP:
-
                         evidences["architecture"].append({
                             "value": constants.ARCHITECTURE_MAP[name],
                             "source": "python",
@@ -122,6 +145,10 @@ def scan_single_file(file, evidences):
                 if isinstance(node.func, ast.Name):
 
                     name = node.func.id.lower()
+                    if name in constants.GENERIC_ARCHITECTURE_MAP:
+                        family = constants.GENERIC_ARCHITECTURE_MAP[name]
+                        family_counter[family] += 1
+                        
                     if name in constants.ARCHITECTURE_MAP:
                         evidences["architecture"].append({
                             "value": constants.ARCHITECTURE_MAP[name],
@@ -147,8 +174,11 @@ def scan_single_file(file, evidences):
 
                 elif isinstance(node.func, ast.Attribute):
                     name = node.func.attr.lower()
+                    if name in constants.GENERIC_ARCHITECTURE_MAP:
+                        family = constants.GENERIC_ARCHITECTURE_MAP[name]
+                        family_counter[family] += 1
+                        
                     if name in constants.ARCHITECTURE_MAP:
-
                         evidences["architecture"].append({
                             "value": constants.ARCHITECTURE_MAP[name],
                             "source": "python",
@@ -294,3 +324,12 @@ def scan_single_file(file, evidences):
                                     "source": "python",
                                     "weight": constants.SOURCE_WEIGHTS["python"]
                                 })
+
+    if not evidences["architecture"] and family_counter:
+        family = family_counter.most_common(1)[0][0]
+        
+        evidences["architecture"].append({
+            "value": family,
+            "source": "python",
+            "weight": constants.SOURCE_WEIGHTS["python"]
+        })

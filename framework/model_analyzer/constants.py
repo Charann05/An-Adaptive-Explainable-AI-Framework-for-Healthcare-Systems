@@ -220,3 +220,30 @@ MEDICAL_EXTENSIONS = {
     ".dcm"
 }
 
+GENERIC_ARCHITECTURE_MAP = {
+    "conv1d": "Custom CNN",
+    "conv2d": "Custom CNN",
+    "conv3d": "Custom CNN",
+
+    "maxpool1d": "Custom CNN",
+    "maxpool2d": "Custom CNN",
+    "maxpool3d": "Custom CNN",
+
+    "avgpool2d": "Custom CNN",
+    "adaptiveavgpool2d": "Custom CNN",
+
+    "lstm": "Custom RNN",
+    "gru": "Custom RNN",
+    "simplernn": "Custom RNN",
+    "rnn": "Custom RNN",
+
+    "transformer": "Custom Transformer",
+    "transformerencoder": "Custom Transformer",
+    "transformerdecoder": "Custom Transformer",
+    "multiheadattention": "Custom Transformer",
+
+    "gcnconv": "Graph Neural Network",
+    "graphconv": "Graph Neural Network",
+    "gatconv": "Graph Neural Network",
+    "sageconv": "Graph Neural Network"
+}
