@@ -10,7 +10,6 @@ from read_input_type import detect_input_type
 from evidence_reducer import reduce_evidence
 from evidence_ranker import rank_evidence
 from report_generator import generate_report
-from read_readme import scan_readme
 
 evidences = create_evidence_store() 
 
@@ -21,7 +20,6 @@ file_info = get_file_info(MODEL_FOLDER, files)
 
 scan_config(MODEL_FOLDER, evidences, file_info)
 scan_requirements(MODEL_FOLDER, evidences, file_info)
-scan_readme(MODEL_FOLDER, evidences, file_info)
 scan_file(MODEL_FOLDER, evidences, file_info)
 detect_input_type(MODEL_FOLDER, evidences, file_info)
 

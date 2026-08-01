@@ -145,6 +145,7 @@ def scan_single_file(file, evidences):
                 if isinstance(node.func, ast.Name):
 
                     name = node.func.id.lower()
+
                     if name in constants.GENERIC_ARCHITECTURE_MAP:
                         family = constants.GENERIC_ARCHITECTURE_MAP[name]
                         family_counter[family] += 1
@@ -168,12 +169,27 @@ def scan_single_file(file, evidences):
                     if name in constants.LOSS_FUNCTION_MAP:
                         evidences["loss_function"].append({
                             "value": constants.LOSS_FUNCTION_MAP[name],
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    if name in constants.CLASSIFICATION_LOSSES:
+                        evidences["task"].append({
+                            "value": "Classification",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    elif name in constants.REGRESSION_LOSSES:
+                        evidences["task"].append({
+                            "value": "Regression",
                             "source": "python",
                             "weight": constants.SOURCE_WEIGHTS["python"]
                         })
 
                 elif isinstance(node.func, ast.Attribute):
                     name = node.func.attr.lower()
+
                     if name in constants.GENERIC_ARCHITECTURE_MAP:
                         family = constants.GENERIC_ARCHITECTURE_MAP[name]
                         family_counter[family] += 1
@@ -196,9 +212,22 @@ def scan_single_file(file, evidences):
 
                     # <<< NEW >>> Loss Function
                     if name in constants.LOSS_FUNCTION_MAP:
-
                         evidences["loss_function"].append({
                             "value": constants.LOSS_FUNCTION_MAP[name],
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    if name in constants.CLASSIFICATION_LOSSES:
+                        evidences["task"].append({
+                            "value": "Classification",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    elif name in constants.REGRESSION_LOSSES:
+                        evidences["task"].append({
+                            "value": "Regression",
                             "source": "python",
                             "weight": constants.SOURCE_WEIGHTS["python"]
                         })
@@ -267,6 +296,13 @@ def scan_single_file(file, evidences):
                             "weight": constants.SOURCE_WEIGHTS["python"]
                         })
 
+                        if num_classes > 1:
+                            evidences["task"].append({
+                                "value": "Classification",
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"] - 1
+                            })
+
                 # ------------------------------------
                 # Detect optimizer and loss
                 # ------------------------------------
@@ -318,9 +354,24 @@ def scan_single_file(file, evidences):
 
                         if loss:
                             loss = loss.lower()
+
                             if loss in constants.LOSS_FUNCTION_MAP:
                                 evidences["loss_function"].append({
                                     "value": constants.LOSS_FUNCTION_MAP[loss],
+                                    "source": "python",
+                                    "weight": constants.SOURCE_WEIGHTS["python"]
+                                })
+
+                            if loss in constants.CLASSIFICATION_LOSSES:
+                                evidences["task"].append({
+                                    "value": "Classification",
+                                    "source": "python",
+                                    "weight": constants.SOURCE_WEIGHTS["python"]
+                                })
+
+                            elif loss in constants.REGRESSION_LOSSES:
+                                evidences["task"].append({
+                                    "value": "Regression",
                                     "source": "python",
                                     "weight": constants.SOURCE_WEIGHTS["python"]
                                 })

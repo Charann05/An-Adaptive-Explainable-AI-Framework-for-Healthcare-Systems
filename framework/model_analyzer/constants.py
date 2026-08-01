@@ -242,33 +242,60 @@ GENERIC_ARCHITECTURE_MAP = {
     "sageconv": "Graph Neural Network"
 }
 
-CLASS_PATTERNS = [
-    r"(\d+)\s*classes",
-    r"(\d+)\s*class",
-    r"(\d+)-class"
-]
+CLASSIFIER_MODELS = {
+    "xgbclassifier": "Classification",
+    "randomforestclassifier": "Classification",
+    "decisiontreeclassifier": "Classification",
+    "logisticregression": "Classification",
+    "svc": "Classification",
+    "gaussiannb": "Classification",
+    "kneighborsclassifier": "Classification",
+    "mlpclassifier": "Classification"
+}
 
-INPUT_README_MAP = {
-    "image": "Image",
-    "images": "Image",
-    "x-ray": "Image",
-    "xray": "Image",
-    "ct": "Image",
-    "mri": "Image",
-    "fundus": "Image",
-    "retina": "Image",
-    "ultrasound": "Image",
+REGRESSOR_MODELS = {
+    "xgbregressor": "Regression",
+    "randomforestregressor": "Regression",
+    "decisiontreeregressor": "Regression",
+    "linearregression": "Regression",
+    "lasso": "Regression",
+    "ridge": "Regression",
+    "elasticnet": "Regression",
+    "svr": "Regression"
+}
 
-    "text": "Text",
-    "nlp": "Text",
-    "document": "Text",
+CLASSIFICATION_LOSSES = {
+    "crossentropyloss",
+    "bceloss",
+    "bcewithlogitsloss",
+    "nllloss",
+    "focalloss",
+    "binary_crossentropy",
+    "binarycrossentropy"
+}
 
-    "csv": "Tabular",
-    "tabular": "Tabular",
-    "table": "Tabular",
+REGRESSION_LOSSES = {
+    "mseloss",
+    "mean_squared_error",
+    "meansquarederror",
+    "l1loss",
+    "smoothl1loss",
+    "huberloss"
+}
 
-    "audio": "Audio",
-    "speech": "Audio",
+CLASSIFICATION_METRICS = {
+    "accuracy",
+    "precision",
+    "recall",
+    "f1_score",
+    "roc_auc_score",
+    "confusion_matrix"
+}
 
-    "video": "Video"
+REGRESSION_METRICS = {
+    "mean_squared_error",
+    "mse",
+    "mae",
+    "rmse",
+    "r2_score"
 }
