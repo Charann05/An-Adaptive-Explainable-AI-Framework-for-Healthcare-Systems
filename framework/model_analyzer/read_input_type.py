@@ -1,85 +1,91 @@
 import ast
 from pathlib import Path
 import constants
+from read_notebook import get_notebook_trees
 
 
 def detect_input_type(MODEL_FOLDER, evidences, file_info):
 
-    variables = {}
-
     detected_types = set()
 
     for file in file_info:
-
-        if file["extension"] != ".py":
+        variables = {}
+        
+        if file["extension"] not in [".py", ".ipynb"]:
             continue
-
         file_path = Path(MODEL_FOLDER) / file["name"]
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                tree = ast.parse(f.read())
+            if file_path.suffix == ".py":
+                with open(file_path, "r", encoding="utf-8") as f:
+                    trees = [ast.parse(f.read(), filename=str(file_path))]
 
-        except Exception:
+            else:
+                trees = get_notebook_trees(file_path)
+
+        except Exception as e:
+            print(f"Error while parsing {file_path}: {e}")
             continue
 
         # ---------------------------------
         # Pass 1 : Collect string variables
         # ---------------------------------
 
-        for node in ast.walk(tree):
+        for tree in trees:
+            for node in ast.walk(tree):
 
-            if (
-                isinstance(node, ast.Assign)
-                and isinstance(node.value, ast.Constant)
-                and isinstance(node.value.value, str)
-            ):
+                if (
+                    isinstance(node, ast.Assign)
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, str)
+                ):
 
-                for target in node.targets:
+                    for target in node.targets:
 
-                    if isinstance(target, ast.Name):
-                        variables[target.id] = node.value.value
+                        if isinstance(target, ast.Name):
+                            variables[target.id] = node.value.value
 
         # ---------------------------------
         # Pass 2 : Detect from API calls
         # ---------------------------------
 
-        for node in ast.walk(tree):
+        for tree in trees:
+            for node in ast.walk(tree):
 
-            if not isinstance(node, ast.Call):
-                continue
+                if not isinstance(node, ast.Call):
+                    continue
 
-            call_name = ""
+                call_name = ""
 
-            if isinstance(node.func, ast.Name):
-                call_name = node.func.id.lower()
+                if isinstance(node.func, ast.Name):
+                    call_name = node.func.id.lower()
 
-            elif isinstance(node.func, ast.Attribute):
+                elif isinstance(node.func, ast.Attribute):
 
-                parts = []
-                current = node.func
+                    parts = []
+                    current = node.func
 
-                while isinstance(current, ast.Attribute):
-                    parts.append(current.attr)
-                    current = current.value
+                    while isinstance(current, ast.Attribute):
+                        parts.append(current.attr)
+                        current = current.value
 
-                if isinstance(current, ast.Name):
-                    parts.append(current.id)
+                    if isinstance(current, ast.Name):
+                        parts.append(current.id)
 
-                call_name = ".".join(reversed(parts)).lower()
+                    call_name = ".".join(reversed(parts)).lower()
 
-            for key, value in constants.INPUT_PATTERNS.items():
+                for key, value in constants.INPUT_PATTERNS.items():
 
-                if key in call_name and value not in detected_types:
+                    if key in call_name and value not in detected_types:
 
-                    evidences["input_type"].append({
-                        "value": value,
-                        "source": "python",
-                        "weight": constants.SOURCE_WEIGHTS["python"]
-                    })
+                        evidences["input_type"].append({
+                            "value": value,
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
 
-                    detected_types.add(value)
-                    break
+                        detected_types.add(value)
+                        break
 
         # ---------------------------------
         # Pass 3 : Detect from file paths
