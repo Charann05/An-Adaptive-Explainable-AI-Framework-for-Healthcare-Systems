@@ -2,7 +2,6 @@
 SOURCE_WEIGHTS = {
     "config" : 10,
     "python" : 8,
-    "model" : 7,
     "requirements" : 6,
     "readme" : 5
 }
@@ -171,8 +170,6 @@ LOSS_PARAMETER_NAMES = {
 }
 
 INPUT_PATTERNS = {
-
-    # Image
     "imagefolder": "Image",
     "image.open": "Image",
     "pil.image.open": "Image",
@@ -180,16 +177,13 @@ INPUT_PATTERNS = {
     "transforms": "Image",
     "albumentations": "Image",
 
-    # Text
     "tokenizer": "Text",
     "berttokenizer": "Text",
     "autotokenizer": "Text",
 
-    # Tabular
     "read_csv": "Tabular",
     "read_excel": "Tabular",
 
-    # Medical Images
     "nib.load": "3D Medical Image",
     "pydicom.dcmread": "DICOM Image"
 }
@@ -246,4 +240,35 @@ GENERIC_ARCHITECTURE_MAP = {
     "graphconv": "Graph Neural Network",
     "gatconv": "Graph Neural Network",
     "sageconv": "Graph Neural Network"
+}
+
+CLASS_PATTERNS = [
+    r"(\d+)\s*classes",
+    r"(\d+)\s*class",
+    r"(\d+)-class"
+]
+
+INPUT_README_MAP = {
+    "image": "Image",
+    "images": "Image",
+    "x-ray": "Image",
+    "xray": "Image",
+    "ct": "Image",
+    "mri": "Image",
+    "fundus": "Image",
+    "retina": "Image",
+    "ultrasound": "Image",
+
+    "text": "Text",
+    "nlp": "Text",
+    "document": "Text",
+
+    "csv": "Tabular",
+    "tabular": "Tabular",
+    "table": "Tabular",
+
+    "audio": "Audio",
+    "speech": "Audio",
+
+    "video": "Video"
 }
