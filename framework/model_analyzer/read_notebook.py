@@ -11,7 +11,12 @@ def get_notebook_trees(file):
         if cell.cell_type != "code":
             continue
 
-        code = cell.source
+        code = "\n".join(
+            line
+            for line in cell.source.splitlines()
+            if not line.lstrip().startswith(("%", "!"))
+        )
+        
         if not code.strip():
             continue
 
