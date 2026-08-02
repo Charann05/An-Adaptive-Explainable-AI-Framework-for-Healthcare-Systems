@@ -30,8 +30,16 @@ print("Reduced Evidences : ", evidences)
 
 final_evidence = rank_evidence(evidences)
 
-print("Final Evidence:")
-print(final_evidence)
+print("\n" + "=" * 50)
+print("FINAL EVIDENCE")
+print("=" * 50)
+for category, evidence in final_evidence.items():
+    label = category.replace("_", " ").title()
+    if evidence is None:
+        print(f"{label:<15}: Unknown")
+    else:
+        print(f"{label:<15}: {evidence['value']}")
+print("=" * 50)
 
 generate_report(final_evidence)
 # print("\nFile Info :\n ",file_info)
