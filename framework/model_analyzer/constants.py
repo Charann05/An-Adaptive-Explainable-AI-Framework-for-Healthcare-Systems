@@ -150,6 +150,7 @@ LOSS_FUNCTION_MAP = {
     "binary_crossentropy": "BinaryCrossentropy",
     "categoricalcrossentropy": "CategoricalCrossentropy",
     "categorical_crossentropy": "CategoricalCrossentropy",
+    "sparsecategoricalcrossentropy": "SparseCategoricalCrossentropy",
     "mseloss": "MSELoss",
     "mse_loss": "MSELoss",
     "l1loss": "L1Loss",
@@ -176,6 +177,8 @@ INPUT_PATTERNS = {
     "cv2.imread": "Image",
     "transforms": "Image",
     "albumentations": "Image",
+    "imagedatagenerator": "Image",
+    "image_dataset_from_directory": "Image",
 
     "tokenizer": "Text",
     "berttokenizer": "Text",
@@ -271,7 +274,8 @@ CLASSIFICATION_LOSSES = {
     "nllloss",
     "focalloss",
     "binary_crossentropy",
-    "binarycrossentropy"
+    "binarycrossentropy",
+    "sparsecategoricalcrossentropy"
 }
 
 REGRESSION_LOSSES = {

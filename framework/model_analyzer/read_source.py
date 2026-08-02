@@ -145,6 +145,19 @@ def scan_single_file(file, evidences):
                 if isinstance(node.func, ast.Name):
 
                     name = node.func.id.lower()
+                    if name in constants.CLASSIFIER_MODELS:
+                        evidences["task"].append({
+                            "value": "Classification",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    elif name in constants.REGRESSOR_MODELS:
+                        evidences["task"].append({
+                            "value": "Regression",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
 
                     if name in constants.GENERIC_ARCHITECTURE_MAP:
                         family = constants.GENERIC_ARCHITECTURE_MAP[name]
@@ -189,6 +202,20 @@ def scan_single_file(file, evidences):
 
                 elif isinstance(node.func, ast.Attribute):
                     name = node.func.attr.lower()
+
+                    if name in constants.CLASSIFIER_MODELS:
+                        evidences["task"].append({
+                            "value": "Classification",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
+
+                    elif name in constants.REGRESSOR_MODELS:
+                        evidences["task"].append({
+                            "value": "Regression",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"]
+                        })
 
                     if name in constants.GENERIC_ARCHITECTURE_MAP:
                         family = constants.GENERIC_ARCHITECTURE_MAP[name]
@@ -351,6 +378,13 @@ def scan_single_file(file, evidences):
                             value = variables.get(keyword.value.id)
                             if isinstance(value, str):
                                 loss = value
+
+                        elif isinstance(keyword.value, ast.Call):
+                            if isinstance(keyword.value.func, ast.Attribute):
+                                loss = keyword.value.func.attr.lower()
+
+                            elif isinstance(keyword.value.func, ast.Name):
+                                loss = keyword.value.func.id.lower()
 
                         if loss:
                             loss = loss.lower()
