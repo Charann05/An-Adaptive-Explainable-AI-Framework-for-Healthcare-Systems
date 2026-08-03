@@ -11,7 +11,7 @@ def load_files():
             files.append(str(file.relative_to(MODEL_FOLDER)))
 
     print("Files Found")
-    for file in files:
-        print(file)
+    # for file in files:
+    #     print(file)
 
     return MODEL_FOLDER, files

@@ -14,7 +14,7 @@ from report_generator import generate_report
 evidences = create_evidence_store() 
 
 MODEL_FOLDER, files = load_files()
-print(files)
+# print(files)
 
 file_info = get_file_info(MODEL_FOLDER, files)
 

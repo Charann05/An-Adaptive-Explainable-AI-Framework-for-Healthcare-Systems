@@ -59,7 +59,7 @@ def scan_single_file(file, evidences):
                     if isinstance(default, ast.Constant):
                         variables[arg.arg] = default.value
 
-        print("Variables:", variables)
+        # print("Variables:", variables)
 
     # --------------------------------------------------
     # Pass 2 : Detect evidences
