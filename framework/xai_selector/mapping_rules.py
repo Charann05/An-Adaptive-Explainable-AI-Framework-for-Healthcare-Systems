@@ -1,4 +1,5 @@
 ARCHITECTURE_TO_CATEGORY = {
+    "cnn": "CNN",              # NEW: catches generic names like "Custom CNN"
     "resnet": "CNN", "efficientnet": "CNN", "densenet": "CNN",
     "vgg": "CNN", "mobilenet": "CNN", "inception": "CNN",
     "randomforest": "RandomForest",
@@ -12,7 +13,7 @@ def normalize_category(raw_category: str, raw_architecture: str = None) -> str:
     if raw_architecture:
         key = raw_architecture.strip().lower()
         for arch_prefix, category in ARCHITECTURE_TO_CATEGORY.items():
-            if arch_prefix in key:          # substring match, not exact
+            if arch_prefix in key:
                 return category
 
     if raw_category:
