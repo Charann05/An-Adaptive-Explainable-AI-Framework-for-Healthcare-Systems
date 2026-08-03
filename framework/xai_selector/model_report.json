@@ -1,0 +1,9 @@
+{
+    "framework": "TensorFlow",
+    "architecture": "Custom CNN",
+    "task": "Classification",
+    "num_classes": "Unknown",
+    "optimizer": "Adam",
+    "loss_function": "BinaryCrossentropy",
+    "input_type": "Image"
+}
