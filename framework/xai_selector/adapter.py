@@ -10,7 +10,7 @@ def build_model_info(parsed_report: dict) -> dict:
     framework = parsed_report.get("framework", {}).get("value", "Unknown")
     input_type = parsed_report.get("input_type", {}).get("value", "Unknown")
     num_classes = parsed_report.get("num_classes", {}).get("value")
-    task = parsed_report.get("task", {}).get("value")   # NEW
+    task = parsed_report.get("task", {}).get("value")  
 
     category = normalize_category(raw_category=None, raw_architecture=architecture)
 
@@ -20,5 +20,5 @@ def build_model_info(parsed_report: dict) -> dict:
         "category": category,
         "input_type": input_type,
         "num_classes": num_classes,
-        "task": task,                                    # NEW
+        "task": task,                               
     }
