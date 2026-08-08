@@ -3,7 +3,7 @@ from pathlib import Path
 def load_files():
 
     print("Loading files...")
-    MODEL_FOLDER = Path("../source_model")
+    MODEL_FOLDER = Path("framework/source_model")
     files = []
 
     for file in MODEL_FOLDER.rglob("*"):

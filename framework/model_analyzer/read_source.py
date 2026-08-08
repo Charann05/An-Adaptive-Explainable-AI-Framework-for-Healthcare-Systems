@@ -1,8 +1,8 @@
 import ast
 from pathlib import Path
-import constants
+from . import constants
 from collections import Counter
-from read_notebook import get_notebook_trees
+from .read_notebook import get_notebook_trees
 
 def scan_file(MODEL_FOLDER, evidences, file_info):
     print("Scanning source files...")

@@ -1,6 +1,6 @@
 import os
 import json
-from constants import SOURCE_WEIGHTS
+from .constants import SOURCE_WEIGHTS
 from pathlib import Path
 
 def scan_config(MODEL_FOLDER, evidences, file_info):

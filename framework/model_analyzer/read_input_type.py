@@ -1,7 +1,7 @@
 import ast
 from pathlib import Path
-import constants
-from read_notebook import get_notebook_trees
+from . import constants
+from .read_notebook import get_notebook_trees
 
 
 def detect_input_type(MODEL_FOLDER, evidences, file_info):
