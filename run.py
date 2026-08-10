@@ -1,6 +1,7 @@
 from framework.model_analyzer.analyzer import analyze_model
 from framework.xai_selector.selector import select_xai
 from framework.xai_selector.report_formatter import format_result
+from framework.dependency_manager import prepare_dependencies
 
 
 def get_value(evidence):
@@ -11,6 +12,7 @@ def get_value(evidence):
 
 
 def main():
+
     # Run analyzer
     final_evidence = analyze_model()
 
@@ -25,8 +27,14 @@ def main():
     # Run selector
     result = select_xai(model_info)
 
-    # Display selector result
+    # Display selector result FIRST
     print(format_result(model_info, result))
+
+    # Get selected XAI technique
+    selected_xai = result["selected"]
+
+    # Prepare XAI dependencies
+    prepare_dependencies(selected_xai)
 
 
 if __name__ == "__main__":
