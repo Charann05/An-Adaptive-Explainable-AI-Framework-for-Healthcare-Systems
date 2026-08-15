@@ -1,6 +1,7 @@
 
 SOURCE_WEIGHTS = {
     "config" : 10,
+    "dataset": 9,
     "python" : 8,
     "requirements" : 6,
     "readme" : 5
@@ -302,4 +303,13 @@ REGRESSION_METRICS = {
     "mae",
     "rmse",
     "r2_score"
+}
+
+CLASSIFICATION_TARGET_NAMES = {
+    "label",
+    "labels",
+    "class",
+    "classes",
+    "category",
+    "categories"
 }

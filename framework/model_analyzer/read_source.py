@@ -67,6 +67,64 @@ def scan_single_file(file, evidences):
     for tree in trees:
         for node in ast.walk(tree):
 
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+
+                    if not isinstance(target, ast.Name):
+                        continue
+
+                    variable_name = target.id.lower()
+                    if variable_name in constants.CLASSIFICATION_TARGET_NAMES:
+                        evidences["task"].append({
+                            "value": "Classification",
+                            "source": "python",
+                            "weight": constants.SOURCE_WEIGHTS["python"] - 2
+                        })
+
+                    if variable_name in {
+                        "x",
+                        "features",
+                        "inputs",
+                        "x_train",
+                        "x_test",
+                        "train_x",
+                        "test_x"
+                    }:
+
+                        feature_names = extract_feature_names(node.value)
+                        if feature_names:
+
+                            evidences["feature_names"].append({
+                                "value": feature_names,
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"]
+                            })
+
+                            evidences["num_inputs"].append({
+                                "value": len(feature_names),
+                                "source": "python",
+                                "weight": constants.SOURCE_WEIGHTS["python"]
+                            })
+
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    if node.func.attr == "Linear":
+                        if len(node.args) >= 2:
+
+                            output_size = node.args[1]
+
+                            if (
+                                isinstance(output_size, ast.Constant)
+                                and isinstance(output_size.value, int)
+                                and output_size.value > 1
+                            ):
+
+                                evidences["task"].append({
+                                    "value": "Classification",
+                                    "source": "python",
+                                    "weight": constants.SOURCE_WEIGHTS["python"] - 3
+                                })
+
             if isinstance(node, ast.ClassDef):
                 class_name = node.name.lower()
 
@@ -418,3 +476,30 @@ def scan_single_file(file, evidences):
             "source": "python",
             "weight": constants.SOURCE_WEIGHTS["python"]
         })
+
+
+def extract_feature_names(node):
+    if not isinstance(node, ast.Subscript):
+        return []
+
+    slice_node = node.slice
+    if isinstance(slice_node, ast.List):
+        return extract_string_list(slice_node)
+
+    if isinstance(slice_node, ast.Tuple):
+        for element in slice_node.elts:
+            if isinstance(element, ast.List):
+                return extract_string_list(element)
+
+    return []
+
+
+def extract_string_list(node):
+    feature_names = []
+    for element in node.elts:
+
+        if isinstance(element, ast.Constant):
+            if isinstance(element.value, str):
+                feature_names.append(element.value)
+
+    return feature_names
