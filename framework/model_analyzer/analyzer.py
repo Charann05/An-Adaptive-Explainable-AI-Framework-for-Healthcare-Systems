@@ -9,6 +9,7 @@ from .read_dataset import scan_dataset
 from .evidence_reducer import reduce_evidence
 from .evidence_ranker import rank_evidence
 from .report_generator import generate_report
+import cli_display
 
 
 def analyze_model():
@@ -17,6 +18,7 @@ def analyze_model():
     MODEL_FOLDER, files = load_files()
     file_info = get_file_info(MODEL_FOLDER, files)
 
+    cli_display.print_status("Loading the Analyzer")
     scan_config(MODEL_FOLDER, evidences, file_info)
     scan_requirements(MODEL_FOLDER, evidences, file_info)
     scan_file(MODEL_FOLDER, evidences, file_info)
@@ -38,7 +40,7 @@ def analyze_model():
         label = category.replace("_", " ").title()
 
         if evidence is None:
-            print(f"{label:<15}: Unknown")
+            continue
         else:
             print(f"{label:<15}: {evidence['value']}")
 
