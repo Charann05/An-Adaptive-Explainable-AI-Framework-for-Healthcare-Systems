@@ -19,8 +19,17 @@ XAI_DEPENDENCIES = {
             "import": "lime"
         }
     ],
+    "TreeInterpreter": [
+        {
+            "pip": "treeinterpreter",
+              "import": 
+              "treeinterpreter"
+        }
+    ],
+    
+    "FeatureImportance": [],
 
-    "Grad-CAM": [
+    "GradCAM": [
         {
             "pip": "grad-cam",
             "import": "pytorch_grad_cam"
