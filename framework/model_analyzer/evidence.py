@@ -7,5 +7,9 @@ def create_evidence_store():
         "num_classes" : [],
         "optimizer" : [],
         "loss_function" : [],
-        "input_type" : []
+        "input_type" : [],
+        "num_inputs": [],
+        "dataset_columns": [],
+        "feature_names": [],
+        "target_column": []
     }
