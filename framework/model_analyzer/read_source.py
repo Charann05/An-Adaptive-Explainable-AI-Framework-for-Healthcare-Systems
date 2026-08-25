@@ -3,16 +3,17 @@ from pathlib import Path
 from . import constants
 from collections import Counter
 from .read_notebook import get_notebook_trees
+from .. import cli_display
 
 def scan_file(MODEL_FOLDER, evidences, file_info):
-    print("Scanning source files...")
+    cli_display.print_status("Scanning source (.py/.ipynb) files")
 
     for file in file_info:
         if file["extension"] not in [".py", ".ipynb"]:
             continue
 
         file_path = Path(MODEL_FOLDER) / file["name"]
-        print("Scanning file:", file_path)
+        cli_display.print_step(f"Scanning {file_path}")
         scan_single_file(file_path, evidences)
 
 def scan_single_file(file, evidences):

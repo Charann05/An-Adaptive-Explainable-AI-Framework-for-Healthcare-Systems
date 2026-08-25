@@ -2,13 +2,19 @@ from .model_analyzer.analyzer import analyze_model
 from .xai_selector.selector import select_xai
 from .xai_selector.report_formatter import format_result
 from .dependency_manager import prepare_dependencies
-from .cli_display import print_banner, print_status
+from .cli_display import print_banner, print_status, print_error
 
 def get_value(evidence):
     if evidence is None:
         return "Unknown"
 
     return evidence["value"]
+
+def is_valid_analysis(evidence):
+    framework = evidence.get("framework", [])
+    architecture = evidence.get("architecture", [])
+
+    return bool(framework) and bool(architecture)
 
 
 def main():
@@ -18,6 +24,10 @@ def main():
 
     # Run analyzer
     final_evidence = analyze_model()
+
+    if not is_valid_analysis(final_evidence):
+        print_error("The selected folder may not be the correct model project.")
+        return
 
     # Convert analyzer output to selector input
     model_info = {

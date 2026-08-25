@@ -1,5 +1,5 @@
 from pathlib import Path
-import cli_display
+from .. import cli_display
 
 SUPPORTED_EXTENSIONS = {
     ".py", ".ipynb", ".pth", ".pt", ".h5", 
@@ -45,7 +45,7 @@ def get_model_folder():
         user_path = input("\nEnter the path to your model project: ").strip()
 
         if not user_path:
-            print("Please enter a valid path.")
+            print("Please enter a valid path")
             continue
 
         MODEL_FOLDER = Path(user_path).expanduser().resolve()

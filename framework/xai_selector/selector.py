@@ -2,7 +2,6 @@ from .adapter import build_model_info
 from .matcher import find_candidates
 from .recommender import rank_techniques
 
-
 def build_reason(model_info, selected, meta):
     return [
         f"Framework : {model_info['framework']}",

@@ -11,22 +11,27 @@ def rank_evidence(evidences):
 
     return final_evidence
 
+
 def select_best(evidence_list):
     scores = defaultdict(int)
 
     for evidence in evidence_list:
-        scores[evidence["value"]] += evidence["weight"]
+        val = evidence["value"]
 
-    winner = max(scores, key=scores.get)
+        key = tuple(val) if isinstance(val, list) else val
+        scores[key] += evidence["weight"]
+
+    winner_key = max(scores, key=scores.get)
     total_score = sum(scores.values())
-    confidence = (scores[winner] / total_score) * 100
+    confidence = (scores[winner_key] / total_score) * 100 if total_score > 0 else 0
 
-    # reduce confidence if only one weak evidence exists
     if len(evidence_list) == 1:
         confidence *= 0.7
 
+    winner = list(winner_key) if isinstance(winner_key, tuple) else winner_key
+
     return {
         "value": winner,
-        "score": scores[winner],
-        "confidence": round(confidence, 2)
+        "score": scores[winner_key],
+        "confidence": round(confidence, 2),
     }
