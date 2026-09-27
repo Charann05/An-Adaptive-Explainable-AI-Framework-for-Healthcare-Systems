@@ -5,3 +5,4 @@
 __pycache__/
 dist/
 adaptive_xai.egg-info/
+.vscode/
