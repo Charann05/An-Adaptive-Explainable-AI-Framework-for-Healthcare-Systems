@@ -13,5 +13,5 @@ def generate_report(final_evidence, output_file="model_report.json"):
     with open(output_file, "w", encoding="utf-8") as file:
         json.dump(report, file, indent=4)
 
-    print(f"Report generated: {output_file}")
+    # print(f"Report generated: {output_file}")
     print("Report saved at:", os.path.abspath(output_file))

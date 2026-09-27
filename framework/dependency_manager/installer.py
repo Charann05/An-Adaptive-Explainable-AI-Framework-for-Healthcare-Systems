@@ -18,7 +18,7 @@ def show_spinner(stop_event, message):
 
 
 def install_package(package_name):
-    print(f"\nInstalling {package_name}...")
+    # print(f"\nInstalling {package_name}...")
 
     stop_event = threading.Event()
     spinner = threading.Thread(target=show_spinner,args=(stop_event, f"Installing {package_name}"))

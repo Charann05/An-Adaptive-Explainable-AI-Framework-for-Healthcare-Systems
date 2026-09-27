@@ -1,1 +1,0 @@
-This folder contains the original prediction models and architecture implemented by the user. The framework loads these files for analysis, inference, and explainability without altering the original source code.
