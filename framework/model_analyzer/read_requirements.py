@@ -1,6 +1,7 @@
 import os
 from . import constants
 from pathlib import Path
+from .. import cli_display
 
 
 def clean_package(line):
@@ -15,21 +16,21 @@ def clean_package(line):
     return line
 
 def scan_requirements(MODEL_FOLDER, evidences, file_info):
-    print("Scannig requirement files...")
+    found = False
+
     for file in file_info:
-
         if file["name"] == "requirements.txt" and file["extension"] == ".txt":
-
             requirements = Path(MODEL_FOLDER) / file["name"]
 
             if not os.path.exists(requirements):
-                return
+                break
+
+            cli_display.print_status("Scanning requirements.txt")
+            found = True
 
             with open(requirements, "r", encoding="utf-8") as lines:
-
                 for line in lines:
                     package = clean_package(line)
-
                     if package in constants.FRAMEWORK_MAP:
                         value = constants.FRAMEWORK_MAP[package]
                         evidences["framework"].append({
@@ -37,3 +38,7 @@ def scan_requirements(MODEL_FOLDER, evidences, file_info):
                                                         "source" : "requirements",
                                                         "weight" : constants.SOURCE_WEIGHTS["requirements"]
                                                     })
+            break
+
+    if not found:
+        cli_display.print_error("No requirements file was found")

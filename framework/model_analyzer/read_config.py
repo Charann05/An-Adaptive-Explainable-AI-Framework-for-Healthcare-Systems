@@ -2,9 +2,11 @@ import os
 import json
 from .constants import SOURCE_WEIGHTS
 from pathlib import Path
+from .. import cli_display
 
 def scan_config(MODEL_FOLDER, evidences, file_info):
-    print("Scannig config files...")
+    found = False
+
     for file in file_info:
 
         if file["name"] == "config.json" and file["extension"] == ".json":
@@ -12,6 +14,9 @@ def scan_config(MODEL_FOLDER, evidences, file_info):
             config_path = Path(MODEL_FOLDER) / file["name"]
 
             if(os.path.exists(config_path)):
+
+                cli_display.print_status("Scanning config.json")
+                found = True
 
                 with open(config_path) as content:
 
@@ -38,4 +43,7 @@ def scan_config(MODEL_FOLDER, evidences, file_info):
                                                                 config.get("output_classes"),
                                                         "source" : "config",
                                                         "weight" : SOURCE_WEIGHTS["config"]
-                                                    })          
+                                                    })      
+
+    if not found:
+        cli_display.print_error("No config file was found")    

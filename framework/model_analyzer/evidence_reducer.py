@@ -1,10 +1,11 @@
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 
 
 def reduce_evidence(evidences):
+    if not evidences:
+        return {}
 
     reduced_evidences = {}
-
     for category, evidence_list in evidences.items():
         reduced_evidences[category] = reduce_category(evidence_list)
 
@@ -12,37 +13,43 @@ def reduce_evidence(evidences):
 
 
 def reduce_category(evidence_list):
-
     if not evidence_list:
         return []
 
-    # Group evidences by source
     grouped = defaultdict(list)
-
     for evidence in evidence_list:
-        grouped[evidence["source"]].append(evidence)
+        grouped[evidence.get("source")].append(evidence)
 
     reduced = []
-
-    # Process each source separately
     for source, items in grouped.items():
+        if not items:
+            continue
 
-        # Count values from this source
-        counter = Counter(
-            item["value"] for item in items
+        if isinstance(items[0].get("value"), list):
+            best_item = max(items, key=lambda item: item.get("weight", 0))
+            winner = best_item["value"]
+        else:
+            weighted_scores = defaultdict(float)
+            for item in items:
+                weighted_scores[item["value"]] += item.get("weight", 1.0)
+
+            counter = Counter(item["value"] for item in items)
+            winner = max(
+                weighted_scores.keys(),
+                key=lambda val: (weighted_scores[val], counter[val], str(val)),
+            )
+
+        matching_items = [item for item in items if item["value"] == winner]
+        best_matching_item = max(
+            matching_items, key=lambda item: item.get("weight", 0)
         )
 
-        # Select highest frequency value
-        winner = counter.most_common(1)[0][0]
-
-        # Keep one evidence object
-        for item in items:
-            if item["value"] == winner:
-                reduced.append({
-                    "value": item["value"],
-                    "source": item["source"],
-                    "weight": item["weight"]
-                })
-                break
+        reduced.append(
+            {
+                "value": best_matching_item["value"],
+                "source": best_matching_item["source"],
+                "weight": best_matching_item.get("weight", 1.0),
+            }
+        )
 
     return reduced

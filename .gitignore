@@ -1,4 +1,8 @@
 /env
+/venv
 *.pth
 *.json
 __pycache__/
+dist/
+adaptive_xai.egg-info/
+.vscode/

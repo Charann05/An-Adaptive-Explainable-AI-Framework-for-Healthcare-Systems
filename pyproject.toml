@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "adaptive-xai"
+version = "0.1.0"
+description = "Adaptive XAI Framework for Healthcare Systems"
+readme = "README.md"
+requires-python = ">=3.14"
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "nbformat",
+]
+
+
+[project.scripts]
+adaptive-xai = "framework.run:main"
+
+[tool.setuptools.packages.find]
+include = ["framework*"]
