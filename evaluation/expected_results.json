@@ -1,0 +1,18 @@
+[
+    {
+        "project": "b1/Brain-Tumor-MRI-Classification",
+        "valid_project": true,
+
+        "framework": "Keras",
+        "architecture": "ResNet-50",
+        "task": "Classification",
+        "num_classes": "4",
+        "optimizer": "Adam",
+        "loss_function": "CategoricalCrossentropy",
+        "input_type": "Image",
+        "num_inputs": null,
+        "dataset_columns": null,
+        "feature_names": null,
+        "target_column": null
+    }
+]

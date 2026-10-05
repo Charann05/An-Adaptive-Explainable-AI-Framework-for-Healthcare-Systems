@@ -1,0 +1,2 @@
+project,framework,architecture,task,input_type,optimizer,loss_function,num_classes,num_inputs,dataset_columns,feature_names,target_column
+b1/Brain-Tumor-MRI-Classification,PASS,PASS,PASS,PASS,PASS,PASS,FAIL,CANNOT_BE_EVALUATED,CANNOT_BE_EVALUATED,CANNOT_BE_EVALUATED,CANNOT_BE_EVALUATED
