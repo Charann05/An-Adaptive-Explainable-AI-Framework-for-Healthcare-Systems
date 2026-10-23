@@ -87,6 +87,26 @@ class TensorFlowAdapter(ModelAdapter):
     def supports_gradients(self) -> bool:
         return True
 
+    def run_gradcam(self, model, input_data, target_layer, prediction: int):
+        import tensorflow as tf
+
+        grad_model = tf.keras.models.Model(
+            inputs=model.inputs,
+            outputs=[target_layer.output, model.output],
+        )
+        with tf.GradientTape() as tape:
+            conv_output, predictions = grad_model(input_data, training=False)
+            loss = predictions[:, prediction]
+
+        grads = tape.gradient(loss, conv_output)
+        pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+        conv_output = conv_output[0]
+        heatmap = conv_output @ pooled_grads[..., tf.newaxis]
+        heatmap = tf.squeeze(heatmap)
+        heatmap = tf.maximum(heatmap, 0)
+        heatmap /= tf.math.reduce_max(heatmap) + 1e-8
+        return heatmap.numpy()
+
     def get_feature_importances(
         self,
         model: Any,

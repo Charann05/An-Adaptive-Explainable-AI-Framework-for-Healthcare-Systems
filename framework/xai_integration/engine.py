@@ -17,6 +17,7 @@ class XAIIntegrationEngine:
         self.auto_install_dependencies = auto_install_dependencies
 
     def explain(self, model, input_data, model_info: dict, selector_result: dict) -> ExplanationResult:
+        model_info = self._enrich_model_info(model, model_info)
         techniques = self._build_technique_order(selector_result)
         failures = []
 
@@ -60,6 +61,26 @@ class XAIIntegrationEngine:
                 failures.append({"technique": technique, "stage": "execution", "error": str(exc)})
 
         raise ExplanationExecutionError(self._build_failure_message(failures))
+
+    @staticmethod
+    def _enrich_model_info(model, model_info: dict) -> dict:
+        """Add capability metadata that static project analysis cannot know."""
+        enriched = dict(model_info)
+        architecture = str(enriched.get("architecture", "")).lower()
+        category = str(enriched.get("category", "")).lower()
+
+        if "randomforest" in architecture or hasattr(model, "estimators_"):
+            enriched["category"] = "RandomForest"
+        elif "decisiontree" in architecture or hasattr(model, "tree_"):
+            enriched["category"] = "DecisionTree"
+        elif "xgb" in architecture or "xgboost" in architecture:
+            enriched["category"] = "XGBoost"
+        elif category in {"classification", "classifier"} and hasattr(
+            model, "feature_importances_"
+        ):
+            enriched["category"] = "Tree"
+
+        return enriched
 
     @staticmethod
     def _build_technique_order(selector_result: dict) -> list[str]:

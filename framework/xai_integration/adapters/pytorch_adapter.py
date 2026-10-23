@@ -94,6 +94,16 @@ class PyTorchAdapter(ModelAdapter):
     def supports_gradients(self) -> bool:
         return True
 
+    def run_gradcam(self, model, input_data, target_layer, prediction: int):
+        from pytorch_grad_cam import GradCAM
+        from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
+        cam = GradCAM(model=model, target_layers=[target_layer])
+        return cam(
+            input_tensor=input_data,
+            targets=[ClassifierOutputTarget(prediction)],
+        )
+
     def get_feature_importances(
         self,
         model: Any,

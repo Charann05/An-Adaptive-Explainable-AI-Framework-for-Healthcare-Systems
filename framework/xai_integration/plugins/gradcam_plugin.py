@@ -2,6 +2,7 @@ from ..base_plugin import XAIPlugin
 from ..output_schema import ExplanationResult
 from ..plugin_registry import register_plugin
 from ..adapters import resolve_adapter
+from ..prediction_utils import predicted_class_and_confidence
 
 
 @register_plugin("GradCAM")
@@ -21,10 +22,9 @@ class GradCAMPlugin(XAIPlugin):
         target_layer, target_layer_name = adapter.get_last_conv_layer(model)
         output = adapter.predict(model, input_data)
 
-        # Framework-agnostic: argmax works the same on torch tensors and numpy/tf arrays
-        prediction = int(output.numpy().argmax()) if hasattr(output, "numpy") else int(output.argmax())
-        probs = adapter.predict_proba(model, input_data)
-        confidence = float(probs.numpy().max() * 100) if hasattr(probs, "numpy") else float(probs.max() * 100)
+        prediction_output = adapter.predict_proba(model, input_data)
+        prediction, confidence = predicted_class_and_confidence(prediction_output)
+        confidence *= 100
 
         heatmap = adapter.run_gradcam(model, input_data, target_layer, prediction)
 

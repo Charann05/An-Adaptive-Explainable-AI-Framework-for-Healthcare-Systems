@@ -31,11 +31,13 @@ class TreeInterpreterPlugin(XAIPlugin):
             np.asarray(input_data),
         )
 
-        predicted_class = int(np.argmax(prediction[0]))
-
-        feature_contributions = contributions[
-            0
-        ][:, predicted_class]
+        prediction_values = np.asarray(prediction[0])
+        if prediction_values.ndim == 0 or prediction_values.size == 1:
+            predicted_class = prediction_values.reshape(-1)[0].item()
+            feature_contributions = np.asarray(contributions[0]).reshape(-1)
+        else:
+            predicted_class = int(np.argmax(prediction_values))
+            feature_contributions = contributions[0][:, predicted_class]
 
         feature_names = model_info.get("feature_names")
 

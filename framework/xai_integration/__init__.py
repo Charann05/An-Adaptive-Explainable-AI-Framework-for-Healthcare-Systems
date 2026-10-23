@@ -5,10 +5,18 @@ from .engine import (
 
 from .model_loader import load_model
 from .output_schema import ExplanationResult
+from .persistent import (
+    IntegrationManifest,
+    PersistentIntegration,
+    find_model_file,
+)
 
 __all__ = [
     "XAIIntegrationEngine",
     "run_explanation",
     "load_model",
     "ExplanationResult",
+    "IntegrationManifest",
+    "PersistentIntegration",
+    "find_model_file",
 ]
