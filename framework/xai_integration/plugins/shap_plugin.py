@@ -2,6 +2,7 @@ from ..base_plugin import XAIPlugin
 from ..output_schema import ExplanationResult
 from ..plugin_registry import register_plugin
 from ..adapters import resolve_adapter
+from ..prediction_utils import predicted_value
 
 
 @register_plugin("SHAP")
@@ -22,6 +23,9 @@ class SHAPPlugin(XAIPlugin):
             adapter = resolve_adapter(model, model_info)
 
         category = model_info.get("category")
+        is_regression = model_info.get("task") == "Regression" or model_info.get(
+            "category"
+        ) in {"Linear", "Regression"}
         feature_names = model_info.get("feature_names")
         input_array = np.asarray(input_data)
 
@@ -43,19 +47,35 @@ class SHAPPlugin(XAIPlugin):
             background = model_info.get("background_data")
             if background is None:
                 raise ValueError("SHAP KernelExplainer fallback requires background_data.")
+
+            def predict_fn(values):
+                try:
+                    output = adapter.predict_proba(model, values)
+                except NotImplementedError:
+                    output = adapter.predict(model, values)
+                if hasattr(output, "detach"):
+                    output = output.detach().cpu().numpy()
+                return np.asarray(output).reshape(-1) if is_regression else output
+
             explainer = shap.KernelExplainer(
-                lambda x: adapter.predict_proba(model, x), np.asarray(background)
+                predict_fn, np.asarray(background)
             )
             raw_values = explainer.shap_values(input_array)
 
         prediction_output = adapter.predict(model, input_data)
-        prediction = int(
-            prediction_output.numpy().argmax() if hasattr(prediction_output, "numpy")
-            else np.asarray(prediction_output).argmax()
+        if hasattr(prediction_output, "detach"):
+            prediction_output = prediction_output.detach().cpu().numpy()
+        prediction = predicted_value(
+            prediction_output,
+            "Regression" if is_regression else "Classification",
         )
 
         # Normalize SHAP's varying output shapes into one flat array for the predicted class
-        if isinstance(raw_values, list):
+        if is_regression:
+            class_values = np.asarray(raw_values).reshape(-1)
+            if class_values.ndim > 1:
+                class_values = class_values[0]
+        elif isinstance(raw_values, list):
             class_values = np.asarray(raw_values[prediction])[0]
         else:
             values_array = np.asarray(raw_values)

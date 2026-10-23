@@ -34,9 +34,6 @@ class LIMEPlugin(XAIPlugin):
         import numpy as np
         from lime.lime_tabular import LimeTabularExplainer
 
-        if not hasattr(model, "predict_proba"):
-            raise ValueError("LIME tabular requires model.predict_proba().")
-
         training_data = model_info.get("background_data")
         if training_data is None:
             raise ValueError("LIME requires background_data for tabular input.")
@@ -44,17 +41,43 @@ class LIMEPlugin(XAIPlugin):
         training_data = np.asarray(training_data)
         instance = np.asarray(input_data)[0]
         feature_names = model_info.get("feature_names")
+        is_regression = model_info.get("task") == "Regression" or model_info.get(
+            "category"
+        ) in {"Linear", "Regression"}
+
+        def predict_fn(values):
+            predictions = adapter.predict(model, values)
+            values = np.asarray(
+                predictions.detach().cpu().numpy()
+                if hasattr(predictions, "detach")
+                else predictions
+            )
+            if is_regression:
+                return values.reshape(-1)
+            if values.ndim == 1:
+                classes = np.unique(values)
+                return np.column_stack([values == label for label in classes])
+            return values
 
         explainer = LimeTabularExplainer(
             training_data=training_data,
             feature_names=feature_names,
-            mode="classification",
+            mode="regression" if is_regression else "classification",
             discretize_continuous=True,
         )
-        explanation = explainer.explain_instance(instance, model.predict_proba, num_features=len(instance))
+        explanation = explainer.explain_instance(
+            instance,
+            predict_fn,
+            num_features=len(instance),
+        )
 
         ranking = [{"feature": name, "importance": float(score)} for name, score in explanation.as_list()]
-        prediction = int(model.predict(np.asarray(input_data))[0])
+        prediction = adapter.predict(model, np.asarray(input_data))
+        if hasattr(prediction, "detach"):
+            prediction = prediction.detach().cpu().numpy()
+        prediction = np.asarray(prediction).reshape(-1)[0]
+        if not is_regression:
+            prediction = int(prediction)
 
         return ExplanationResult(
             technique_used=self.name, prediction=prediction,
@@ -63,14 +86,25 @@ class LIMEPlugin(XAIPlugin):
 
     def _explain_image(self, model, input_data, model_info, adapter):
         import numpy as np
-        import torch
         from lime.lime_image import LimeImageExplainer
 
         def predict_fn(images_batch):
-            batch_input = np.transpose(images_batch, (0, 3, 1, 2))
-            batch_input = torch.as_tensor(batch_input).float().contiguous()
+            batch_input = np.asarray(images_batch)
+            channel_order = model_info.get("channel_order")
+            if channel_order is None:
+                channel_order = (
+                    "channels_first"
+                    if adapter.framework == "pytorch"
+                    else "channels_last"
+                )
+            if channel_order == "channels_first":
+                batch_input = np.transpose(batch_input, (0, 3, 1, 2))
             output = adapter.predict_proba(model, batch_input)
-            return output.detach().numpy() if hasattr(output, "detach") else np.asarray(output)
+            return (
+                output.detach().cpu().numpy()
+                if hasattr(output, "detach")
+                else np.asarray(output)
+            )
 
         image = np.asarray(input_data[0])
         if hasattr(image, "detach"):
@@ -88,4 +122,29 @@ class LIMEPlugin(XAIPlugin):
             technique_used=self.name, prediction=int(prediction),
             raw_output=mask.tolist(),
             metadata={"note": "raw_output is a segmentation mask highlighting influential regions"},
+        )
+
+    def _explain_text(self, model, input_data, model_info, adapter):
+        from lime.lime_text import LimeTextExplainer
+
+        texts = input_data if isinstance(input_data, list) else [input_data]
+
+        def predict_fn(values):
+            output = adapter.predict_proba(model, values)
+            return output.detach().cpu().numpy() if hasattr(output, "detach") else output
+
+        explanation = LimeTextExplainer(
+            class_names=model_info.get("class_names"),
+        ).explain_instance(texts[0], predict_fn)
+        prediction = adapter.predict(model, texts)
+        if hasattr(prediction, "detach"):
+            prediction = prediction.detach().cpu().numpy()
+        return ExplanationResult(
+            technique_used=self.name,
+            prediction=int(prediction[0]),
+            feature_ranking=[
+                {"feature": word, "importance": float(score)}
+                for word, score in explanation.as_list()
+            ],
+            raw_output=explanation.as_list(),
         )

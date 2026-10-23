@@ -1,6 +1,7 @@
 from ..base_plugin import XAIPlugin
 from ..output_schema import ExplanationResult
 from ..plugin_registry import register_plugin
+from ..prediction_utils import predicted_value
 
 
 @register_plugin("FeatureImportance")
@@ -23,12 +24,20 @@ class FeatureImportancePlugin(XAIPlugin):
 
     def explain(self, model, input_data, model_info: dict, adapter=None) -> ExplanationResult:
 
-        if not hasattr(model, "feature_importances_"):
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+        elif hasattr(model, "coef_"):
+            importances = model.coef_
+        else:
             raise ValueError(
-                "Model does not expose feature_importances_."
+                "Model does not expose feature_importances_ or coef_."
             )
 
-        importances = model.feature_importances_
+        import numpy as np
+
+        importances = np.asarray(importances)
+        if importances.ndim > 1:
+            importances = np.mean(np.abs(importances), axis=0)
 
         feature_names = model_info.get("feature_names")
 
@@ -52,10 +61,11 @@ class FeatureImportancePlugin(XAIPlugin):
             reverse=True,
         )
 
-        prediction = None
-
-        if input_data is not None:
-            prediction = model.predict(input_data)[0]
+        prediction = (
+            None
+            if input_data is None
+            else predicted_value(model.predict(input_data), model_info.get("task"))
+        )
 
         return ExplanationResult(
             technique_used=self.name,
