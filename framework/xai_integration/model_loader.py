@@ -3,6 +3,7 @@ import importlib.util
 import inspect
 from typing import Any
 
+from ..dependency_manager import prepare_model_dependencies
 from .exceptions import ModelLoadError
 
 
@@ -46,6 +47,22 @@ class ModelLoader:
             )
 
         framework_key = self._normalize_framework(framework)
+        if framework_key not in self.SUPPORTED_FRAMEWORKS:
+            raise ModelLoadError(
+                f"Unsupported model framework: {framework}"
+            )
+
+        dependency_result = prepare_model_dependencies(
+            framework_key,
+            path,
+        )
+        failed_dependencies = dependency_result["failed"]
+        if failed_dependencies:
+            packages = ", ".join(failed_dependencies)
+            raise ModelLoadError(
+                f"Could not install required dependencies for "
+                f"'{framework}': {packages}."
+            )
 
         try:
             if framework_key == "pytorch":
@@ -72,9 +89,7 @@ class ModelLoader:
                 f"using framework '{framework}': {exc}"
             ) from exc
 
-        raise ModelLoadError(
-            f"Unsupported model framework: {framework}"
-        )
+        raise ModelLoadError(f"Unsupported model framework: {framework}")
 
     @staticmethod
     def _normalize_framework(framework: str) -> str:
