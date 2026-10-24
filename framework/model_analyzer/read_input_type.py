@@ -7,6 +7,7 @@ from .read_notebook import get_notebook_trees
 def detect_input_type(MODEL_FOLDER, evidences, file_info):
 
     detected_types = set()
+    tabular_detected = False
 
     for file in file_info:
         variables = {}
@@ -78,6 +79,10 @@ def detect_input_type(MODEL_FOLDER, evidences, file_info):
 
                     if key in call_name and value not in detected_types:
 
+                        if value == "Tabular":
+                            tabular_detected = True
+                            break
+
                         evidences["input_type"].append({
                             "value": value,
                             "source": "python",
@@ -131,16 +136,13 @@ def detect_input_type(MODEL_FOLDER, evidences, file_info):
                     })
                     detected_types.add("Text")
 
-            # CSV → only if no stronger input type has been found
-            elif (
-                any(ext in value for ext in constants.TABULAR_EXTENSIONS)
-                and not detected_types.intersection({"Image", "Text", "3D Medical Image"})
-            ):
+            # Defer CSV evidence until image/text evidence has been checked.
+            elif any(ext in value for ext in constants.TABULAR_EXTENSIONS):
+                tabular_detected = True
 
-                if "Tabular" not in detected_types:
-                    evidences["input_type"].append({
-                        "value": "Tabular",
-                        "source": "python",
-                        "weight": constants.SOURCE_WEIGHTS["python"]
-                    })
-                    detected_types.add("Tabular")
+    if tabular_detected and not detected_types:
+        evidences["input_type"].append({
+            "value": "Tabular",
+            "source": "python",
+            "weight": constants.SOURCE_WEIGHTS["python"]
+        })
