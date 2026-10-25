@@ -3,6 +3,7 @@ from ..base_plugin import XAIPlugin
 from ..output_schema import ExplanationResult
 from ..plugin_registry import register_plugin
 from ..adapters import resolve_adapter
+from ..prediction_utils import predicted_value
 
 
 @register_plugin("LIME")
@@ -72,12 +73,14 @@ class LIMEPlugin(XAIPlugin):
         )
 
         ranking = [{"feature": name, "importance": float(score)} for name, score in explanation.as_list()]
-        prediction = adapter.predict(model, np.asarray(input_data))
-        if hasattr(prediction, "detach"):
-            prediction = prediction.detach().cpu().numpy()
-        prediction = np.asarray(prediction).reshape(-1)[0]
-        if not is_regression:
-            prediction = int(prediction)
+        prediction = predicted_value(
+            adapter.predict(model, np.asarray(input_data)),
+            "Regression" if is_regression else "Classification",
+            class_scores=(
+                not is_regression
+                and adapter.framework in {"pytorch", "tensorflow"}
+            ),
+        )
 
         return ExplanationResult(
             technique_used=self.name, prediction=prediction,
@@ -136,12 +139,14 @@ class LIMEPlugin(XAIPlugin):
         explanation = LimeTextExplainer(
             class_names=model_info.get("class_names"),
         ).explain_instance(texts[0], predict_fn)
-        prediction = adapter.predict(model, texts)
-        if hasattr(prediction, "detach"):
-            prediction = prediction.detach().cpu().numpy()
+        prediction = predicted_value(
+            adapter.predict(model, texts),
+            "Classification",
+            class_scores=adapter.framework in {"pytorch", "tensorflow"},
+        )
         return ExplanationResult(
             technique_used=self.name,
-            prediction=int(prediction[0]),
+            prediction=prediction,
             feature_ranking=[
                 {"feature": word, "importance": float(score)}
                 for word, score in explanation.as_list()

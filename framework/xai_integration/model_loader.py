@@ -168,7 +168,11 @@ class ModelLoader:
 
         import tensorflow as tf
 
-        return tf.keras.models.load_model(path)
+        return tf.keras.models.load_model(
+            path,
+            custom_objects=_keras_legacy_custom_objects(tf),
+            compile=False,
+        )
 
     @staticmethod
     def _load_xgboost(path: Path):
@@ -183,6 +187,39 @@ class ModelLoader:
 
 
 model_loader = ModelLoader()
+
+
+def _keras_legacy_custom_objects(tf: Any) -> dict[str, Any]:
+    """Adapt legacy SeparableConv2D configs to current Keras arguments."""
+    keras_separable_conv2d = tf.keras.layers.SeparableConv2D
+
+    class CompatibleSeparableConv2D(keras_separable_conv2d):
+        @classmethod
+        def from_config(cls, config):
+            config = dict(config)
+            groups = config.pop("groups", 1)
+            if groups != 1:
+                raise ValueError(
+                    "Cannot load SeparableConv2D with groups other than 1."
+                )
+
+            for legacy_name in (
+                "kernel_initializer",
+                "kernel_regularizer",
+                "kernel_constraint",
+            ):
+                legacy_value = config.pop(legacy_name, None)
+                if legacy_value is None:
+                    continue
+                suffix = legacy_name.removeprefix("kernel_")
+                for operation in ("depthwise", "pointwise"):
+                    name = f"{operation}_{suffix}"
+                    if config.get(name) is None:
+                        config[name] = legacy_value
+
+            return super().from_config(config)
+
+    return {"SeparableConv2D": CompatibleSeparableConv2D}
 
 
 def load_model(

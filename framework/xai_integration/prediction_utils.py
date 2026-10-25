@@ -13,13 +13,20 @@ def to_numpy(value: Any) -> np.ndarray:
     return np.asarray(value)
 
 
-def predicted_value(output: Any, task: str | None = None) -> Any:
+def predicted_value(
+    output: Any,
+    task: str | None = None,
+    *,
+    class_scores: bool = False,
+) -> Any:
     values = to_numpy(output)
     flattened = values.reshape(-1)
     if flattened.size == 0:
         raise ValueError("The model returned an empty prediction.")
     if task and task.lower() == "regression":
         return flattened[0].item()
+    if class_scores and values.ndim == 1 and values.size > 1:
+        return int(np.argmax(values))
     if values.ndim >= 2 and values.shape[-1] > 1:
         return int(np.argmax(values[0]))
     return flattened[0].item()

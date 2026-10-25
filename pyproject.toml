@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptive-xai"
-version = "0.2.3"
-description = "Adaptive XAI Framework for Healthcare Systems"
+version = "0.2.8"
+description = "Update model loader to be compatible with the legacy Keras arguments."
 readme = "README.md"
 requires-python = ">=3.14"
 

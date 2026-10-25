@@ -68,6 +68,7 @@ class SHAPPlugin(XAIPlugin):
         prediction = predicted_value(
             prediction_output,
             "Regression" if is_regression else "Classification",
+            class_scores=adapter.framework in {"pytorch", "tensorflow"},
         )
 
         # Normalize SHAP's varying output shapes into one flat array for the predicted class

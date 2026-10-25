@@ -25,6 +25,26 @@ def is_valid_analysis(evidence):
     return bool(framework) and bool(architecture)
 
 
+def prompt_for_model_file(project_root, framework):
+    project_root = Path(project_root).expanduser().resolve()
+    while True:
+        entered_path = input(
+            f"Enter the path to the {framework} model file "
+            "(absolute or relative to the project folder, or press Enter to cancel): "
+        ).strip().strip("\"'")
+        if not entered_path:
+            return None
+
+        model_path = Path(entered_path).expanduser()
+        if not model_path.is_absolute():
+            model_path = project_root / model_path
+        model_path = model_path.resolve()
+        if model_path.is_file():
+            return model_path
+
+        print_error(f"Model file does not exist or is not a file: {model_path}")
+
+
 def main():
     print_banner()
     print_status("Initializing the framework")
@@ -64,7 +84,13 @@ def main():
             )
         except FileNotFoundError as error:
             print_error(str(error))
-            return
+            model_path = prompt_for_model_file(
+                project_root,
+                model_info["framework"],
+            )
+            if model_path is None:
+                print_error("Model integration cancelled; no model file was selected.")
+                return
 
         integration_model_info = build_model_info(model_info)
         feature_names = get_value(final_evidence.get("feature_names"))

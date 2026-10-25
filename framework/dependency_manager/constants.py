@@ -33,6 +33,10 @@ XAI_DEPENDENCIES = {
         {
             "pip": "grad-cam",
             "import": "pytorch_grad_cam"
+        },
+        {
+            "pip": "matplotlib",
+            "import": "matplotlib"
         }
     ]
 }

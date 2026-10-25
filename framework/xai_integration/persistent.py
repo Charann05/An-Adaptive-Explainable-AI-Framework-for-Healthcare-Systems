@@ -149,6 +149,7 @@ from pathlib import Path
 from typing import Any
 
 from framework.xai_integration import load_model, run_explanation
+from framework.xai_integration.visualization import display_gradcam
 
 
 INTEGRATION = {configuration}
@@ -280,7 +281,19 @@ if __name__ == "__main__":
         input_data = _load_image(args.input_image)
     else:
         input_data = _prompt_input()
-    print(json.dumps(run(input_data), indent=2, default=str))
+    output = run(input_data)
+    if output["technique_used"] == "GradCAM":
+        visualization_path = display_gradcam(
+            input_data,
+            output["raw_output"],
+            Path(__file__).with_name("gradcam_explanation.png"),
+            f"Grad-CAM explanation for prediction {{output['prediction']}}",
+        )
+        output["visualization"] = {{
+            "type": "Grad-CAM overlay",
+            "path": str(visualization_path),
+        }}
+    print(json.dumps(output, indent=2, default=str))
 ''',
             encoding="utf-8",
         )
