@@ -11,9 +11,39 @@ from framework.model_analyzer.load_model_files import (
     collect_files,
     is_valid_project_folder,
 )
+from framework.model_analyzer.classify_file_type import get_file_info
+from framework.model_analyzer.read_input_type import detect_input_type
 
 
 class ModelAnalyzerFileCollectionTests(unittest.TestCase):
+    def test_excludes_generated_integration_from_project_analysis(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "adap_xai.py").write_text(
+                "import cv2\n"
+                "image = cv2.imread('input.png')\n",
+                encoding="utf-8",
+            )
+            (project / "model.py").write_text(
+                "from sklearn.tree import DecisionTreeClassifier\n",
+                encoding="utf-8",
+            )
+
+            collected_files = collect_files(project)
+            evidences = {"input_type": []}
+            detect_input_type(
+                project,
+                evidences,
+                get_file_info(project, collected_files),
+            )
+
+            self.assertNotIn("adap_xai.py", collected_files)
+            self.assertIn("model.py", collected_files)
+            self.assertNotIn(
+                "Image",
+                [item["value"] for item in evidences["input_type"]],
+            )
+
     def test_excludes_exact_framework_report_filename(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
