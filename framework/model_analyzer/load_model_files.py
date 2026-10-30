@@ -10,12 +10,19 @@ SUPPORTED_EXTENSIONS = {
 EXCLUDED_DIRECTORIES = {
     ".git", ".venv", "venv", "env", "__pycache__", "node_modules",
 }
+EXCLUDED_FILES = {"model_report.json"}
+
+
+def _is_excluded_file(file):
+    return file.name in EXCLUDED_FILES
 
 def is_valid_project_folder(folder):
     for file in folder.rglob("*"):
         if not file.is_file():
             continue
         if any(part in EXCLUDED_DIRECTORIES for part in file.parts):
+            continue
+        if _is_excluded_file(file):
             continue
         if file.suffix.lower() in SUPPORTED_EXTENSIONS:
             return True
@@ -27,6 +34,8 @@ def collect_files(folder):
         if not file.is_file():
             continue
         if any(part in EXCLUDED_DIRECTORIES for part in file.parts):
+            continue
+        if _is_excluded_file(file):
             continue
         files.append(str(file.relative_to(folder)))
     return files
