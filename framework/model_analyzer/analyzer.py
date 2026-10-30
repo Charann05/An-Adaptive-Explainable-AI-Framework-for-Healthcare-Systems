@@ -57,5 +57,9 @@ def analyze_model():
     return final_evidence
 
 
-if __name__ == "__main__":
+def main():
     analyze_model()
+
+
+if __name__ == "__main__":
+    main()

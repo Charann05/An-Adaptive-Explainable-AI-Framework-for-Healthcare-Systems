@@ -5,6 +5,88 @@ from ..adapters import resolve_adapter
 from ..prediction_utils import predicted_value
 
 
+def _class_output_index(model, prediction, output_count: int) -> int:
+    import numpy as np
+
+    if output_count == 1:
+        return 0
+
+    classes = getattr(model, "classes_", None)
+    if isinstance(classes, (list, tuple)) and classes and isinstance(
+        classes[0], (list, tuple, np.ndarray)
+    ):
+        classes = classes[0]
+    if classes is not None:
+        matches = np.flatnonzero(np.asarray(classes) == prediction)
+        if matches.size:
+            return int(matches[0])
+
+    if isinstance(prediction, (int, np.integer)):
+        class_index = int(prediction)
+        if 0 <= class_index < output_count:
+            return class_index
+    raise ValueError(
+        "Could not map the model's predicted class to SHAP's output index."
+    )
+
+
+def _select_shap_values(raw_values, prediction, model, feature_count, is_regression):
+    import numpy as np
+
+    if hasattr(raw_values, "values"):
+        raw_values = raw_values.values
+
+    if isinstance(raw_values, list):
+        output_count = len(raw_values)
+        if is_regression or output_count == 1:
+            selected = np.asarray(raw_values[0]).reshape(-1, feature_count)[0]
+        else:
+            output_index = _class_output_index(model, prediction, output_count)
+            selected = np.asarray(raw_values[output_index]).reshape(
+                -1, feature_count
+            )[0]
+    else:
+        values = np.asarray(raw_values)
+        if values.ndim == 1 and values.size == feature_count:
+            selected = values
+        elif values.ndim == 2 and values.shape[-1] == feature_count:
+            selected = values[0]
+        elif values.ndim == 3:
+            if values.shape[1] == feature_count:
+                output_count = values.shape[2]
+                output_index = (
+                    0
+                    if is_regression
+                    else _class_output_index(model, prediction, output_count)
+                )
+                selected = values[0, :, output_index]
+            elif values.shape[2] == feature_count:
+                output_count = values.shape[1]
+                output_index = (
+                    0
+                    if is_regression
+                    else _class_output_index(model, prediction, output_count)
+                )
+                selected = values[0, output_index, :]
+            else:
+                raise ValueError(
+                    "SHAP output dimensions do not match the model's feature count."
+                )
+        else:
+            raise ValueError(
+                "Unsupported SHAP output shape for a single model input: "
+                f"{values.shape}."
+            )
+
+    selected = np.asarray(selected).reshape(-1)
+    if selected.size != feature_count:
+        raise ValueError(
+            "SHAP returned a different number of feature scores than the "
+            "model input."
+        )
+    return selected
+
+
 @register_plugin("SHAP")
 class SHAPPlugin(XAIPlugin):
 
@@ -35,12 +117,25 @@ class SHAPPlugin(XAIPlugin):
 
         elif adapter.framework == "pytorch":
             import torch
-            background = torch.as_tensor(input_array).float()
+            background_data = model_info.get("background_data")
+            if background_data is None:
+                raise ValueError(
+                    "SHAP DeepExplainer requires representative "
+                    "background_data distinct from the explained input."
+                )
+            background = torch.as_tensor(background_data).float()
+            explanation_input = torch.as_tensor(input_array).float()
             explainer = shap.DeepExplainer(model, background)
-            raw_values = explainer.shap_values(background)
+            raw_values = explainer.shap_values(explanation_input)
 
         elif adapter.framework == "tensorflow":
-            explainer = shap.GradientExplainer(model, input_array)
+            background = model_info.get("background_data")
+            if background is None:
+                raise ValueError(
+                    "SHAP GradientExplainer requires representative "
+                    "background_data distinct from the explained input."
+                )
+            explainer = shap.GradientExplainer(model, np.asarray(background))
             raw_values = explainer.shap_values(input_array)
 
         else:
@@ -71,16 +166,13 @@ class SHAPPlugin(XAIPlugin):
             class_scores=adapter.framework in {"pytorch", "tensorflow"},
         )
 
-        # Normalize SHAP's varying output shapes into one flat array for the predicted class
-        if is_regression:
-            class_values = np.asarray(raw_values).reshape(-1)
-            if class_values.ndim > 1:
-                class_values = class_values[0]
-        elif isinstance(raw_values, list):
-            class_values = np.asarray(raw_values[prediction])[0]
-        else:
-            values_array = np.asarray(raw_values)
-            class_values = values_array[0, :, prediction] if values_array.ndim == 3 else values_array[0]
+        class_values = _select_shap_values(
+            raw_values,
+            prediction,
+            model,
+            input_array.shape[-1],
+            is_regression,
+        )
 
         ranking = [
             {
@@ -96,5 +188,8 @@ class SHAPPlugin(XAIPlugin):
             prediction=prediction,
             feature_ranking=ranking,
             raw_output=class_values.tolist(),
-            metadata={"framework": adapter.framework, "shap_variant": explainer.__class__.__name__},
+            metadata={
+                "framework": adapter.framework,
+                "shap_variant": explainer.__class__.__name__,
+            },
         )

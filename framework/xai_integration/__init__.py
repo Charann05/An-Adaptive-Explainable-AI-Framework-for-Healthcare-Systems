@@ -9,6 +9,7 @@ from .persistent import (
     IntegrationManifest,
     PersistentIntegration,
     find_model_file,
+    find_model_files,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "IntegrationManifest",
     "PersistentIntegration",
     "find_model_file",
+    "find_model_files",
 ]

@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptive-xai"
-version = "0.2.8"
-description = "Update model loader to be compatible with the legacy Keras arguments."
+version = "0.2.14"
+description = "Add a custom entry point to the xai_selector"
 readme = "README.md"
 requires-python = ">=3.14"
 
@@ -19,6 +19,8 @@ dependencies = [
 
 [project.scripts]
 adaptive-xai = "framework.run:main"
+analyze = "framework.model_analyzer.analyzer:main"
+xai-select = "framework.xai_selector.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["framework*"]

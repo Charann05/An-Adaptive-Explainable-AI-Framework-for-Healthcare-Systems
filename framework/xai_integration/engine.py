@@ -20,13 +20,14 @@ class XAIIntegrationEngine:
         model_info = self._enrich_model_info(model, model_info)
         techniques = self._build_technique_order(selector_result)
         failures = []
+        zero_attribution_result = None
 
         try:
             adapter = resolve_adapter(model, model_info)
         except ValueError as exc:
             raise ExplanationExecutionError(str(exc)) from exc
 
-        for technique in techniques:
+        for index, technique in enumerate(techniques):
             try:
                 plugin = get_plugin(technique)
             except PluginNotFoundError as exc:
@@ -52,6 +53,36 @@ class XAIIntegrationEngine:
                     model_info=model_info,
                     adapter=adapter,
                 )
+                if (
+                    technique in {"SHAP", "LIME"}
+                    and result.feature_ranking
+                    and all(
+                        float(item["importance"]) == 0.0
+                        for item in result.feature_ranking
+                    )
+                ):
+                    zero_attribution_result = result
+                    failures.append({
+                        "technique": technique,
+                        "stage": "attribution",
+                        "error": (
+                            "All feature attribution scores were zero; "
+                            "trying another available technique."
+                        ),
+                    })
+                    remaining = techniques[index + 1:]
+                    local_techniques = [
+                        name for name in remaining if name in {"SHAP", "LIME"}
+                    ]
+                    global_techniques = [
+                        name
+                        for name in remaining
+                        if name not in {"SHAP", "LIME"}
+                    ]
+                    techniques[index + 1:] = (
+                        local_techniques + global_techniques
+                    )
+                    continue
                 result.metadata.setdefault("attempted_techniques", techniques)
                 result.metadata.setdefault("fallback_count", len(failures))
                 # Capture the exact reasons why prior choices failed
@@ -59,6 +90,21 @@ class XAIIntegrationEngine:
                 return result
             except Exception as exc:
                 failures.append({"technique": technique, "stage": "execution", "error": str(exc)})
+
+        if zero_attribution_result is not None:
+            zero_attribution_result.metadata.setdefault(
+                "attempted_techniques",
+                techniques,
+            )
+            zero_attribution_result.metadata.setdefault(
+                "fallback_count",
+                len(failures),
+            )
+            zero_attribution_result.metadata.setdefault(
+                "fallback_details",
+                failures,
+            )
+            return zero_attribution_result
 
         raise ExplanationExecutionError(self._build_failure_message(failures))
 

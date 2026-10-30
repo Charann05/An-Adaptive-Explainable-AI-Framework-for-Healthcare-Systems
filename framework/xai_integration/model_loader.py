@@ -1,10 +1,14 @@
-from pathlib import Path
+import importlib
 import importlib.util
 import inspect
+import sys
+import warnings
+from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 from ..dependency_manager import prepare_model_dependencies
-from .exceptions import ModelLoadError
+from .exceptions import ModelCompatibilityError, ModelLoadError
 
 
 class ModelLoader:
@@ -72,7 +76,31 @@ class ModelLoader:
                 "sklearn",
                 "scikit-learn",
             }:
-                return self._load_joblib(path)
+                try:
+                    return self._load_joblib(
+                        path,
+                        sklearn_compatibility=True,
+                    )
+                except ModuleNotFoundError as exc:
+                    if exc.name not in {"xgboost", "xgboost.sklearn"}:
+                        raise
+
+                    dependency_result = prepare_model_dependencies(
+                        "xgboost",
+                        path,
+                    )
+                    failed_dependencies = dependency_result["failed"]
+                    if failed_dependencies:
+                        packages = ", ".join(failed_dependencies)
+                        raise ModelLoadError(
+                            "This model requires XGBoost, but its dependency "
+                            f"could not be prepared: {packages}."
+                        ) from exc
+
+                    return self._load_joblib(
+                        path,
+                        sklearn_compatibility=True,
+                    )
 
             if framework_key == "xgboost":
                 return self._load_xgboost(path)
@@ -83,7 +111,20 @@ class ModelLoader:
             }:
                 return self._load_tensorflow(path)
 
+        except ModelCompatibilityError:
+            raise
         except Exception as exc:
+            if (
+                framework_key in {"sklearn", "scikit-learn"}
+                and isinstance(exc, ValueError)
+                and "node array from the pickle has an incompatible dtype"
+                in str(exc).lower()
+            ):
+                raise ModelCompatibilityError(
+                    "This scikit-learn decision-tree model was saved with an "
+                    "incompatible version. Its internal tree format differs "
+                    "from the installed scikit-learn version."
+                ) from exc
             raise ModelLoadError(
                 f"Failed to load model '{path}' "
                 f"using framework '{framework}': {exc}"
@@ -157,11 +198,124 @@ class ModelLoader:
 
 
     @staticmethod
-    def _load_joblib(path: Path):
+    def _load_joblib(
+        path: Path,
+        *,
+        sklearn_compatibility: bool = False,
+    ):
 
         import joblib
 
-        return joblib.load(path)
+        if sklearn_compatibility:
+            legacy_modules = {
+                "sklearn.ensemble.forest": "sklearn.ensemble._forest",
+                "sklearn.tree.tree": "sklearn.tree._classes",
+            }
+            for legacy_module, current_module in legacy_modules.items():
+                try:
+                    importlib.import_module(legacy_module)
+                except ModuleNotFoundError as exc:
+                    if exc.name != legacy_module:
+                        raise
+                    sys.modules[legacy_module] = importlib.import_module(
+                        current_module
+                    )
+        def load():
+            try:
+                return joblib.load(path)
+            except ModuleNotFoundError as exc:
+                if (
+                    not sklearn_compatibility
+                    or exc.name != "xgboost.sklearn"
+                ):
+                    raise
+                ModelLoader._ensure_legacy_xgboost_sklearn_module()
+                return joblib.load(path)
+
+        if not sklearn_compatibility:
+            return load()
+
+        from sklearn.exceptions import InconsistentVersionWarning
+
+        with warnings.catch_warnings(record=True) as captured_warnings:
+            warnings.simplefilter("always", InconsistentVersionWarning)
+            try:
+                model = load()
+            except Exception as exc:
+                version_warnings = [
+                    item
+                    for item in captured_warnings
+                    if issubclass(item.category, InconsistentVersionWarning)
+                ]
+                if not version_warnings:
+                    raise
+
+                saved_versions = tuple(sorted({
+                    item.message.original_sklearn_version
+                    for item in version_warnings
+                }))
+                installed_version = (
+                    version_warnings[0].message.current_sklearn_version
+                )
+                versions = ", ".join(saved_versions)
+                raise ModelCompatibilityError(
+                    "The model records scikit-learn version "
+                    f"{versions} when it was saved; the installed version is "
+                    f"{installed_version}. Loading failed because the "
+                    "serialized model uses an incompatible scikit-learn "
+                    "format.",
+                    package="scikit-learn",
+                    saved_versions=saved_versions,
+                    installed_version=installed_version,
+                ) from exc
+
+        for item in captured_warnings:
+            warnings.showwarning(
+                item.message,
+                item.category,
+                item.filename,
+                item.lineno,
+                file=item.file,
+                line=item.line,
+            )
+        return model
+
+    @staticmethod
+    def _ensure_legacy_xgboost_sklearn_module() -> None:
+        legacy_module = "xgboost.sklearn"
+        try:
+            importlib.import_module(legacy_module)
+            return
+        except ModuleNotFoundError as exc:
+            if exc.name != legacy_module:
+                raise
+
+        xgboost = importlib.import_module("xgboost")
+        estimator_names = (
+            "XGBModel",
+            "XGBClassifier",
+            "XGBRegressor",
+            "XGBRanker",
+            "XGBRFClassifier",
+            "XGBRFRegressor",
+        )
+        estimators = {
+            name: getattr(xgboost, name)
+            for name in estimator_names
+            if hasattr(xgboost, name)
+        }
+        if not estimators:
+            raise ModelLoadError(
+                "The installed XGBoost package does not expose any supported "
+                "scikit-learn estimator classes. Reinstall XGBoost with its "
+                "scikit-learn interface in this Python environment, or use "
+                "the version that created the model."
+            )
+
+        compatibility_module = ModuleType(legacy_module)
+        compatibility_module.__dict__.update(estimators)
+        sys.modules[legacy_module] = compatibility_module
+        setattr(xgboost, "sklearn", compatibility_module)
 
     @staticmethod
     def _load_tensorflow(path: Path):

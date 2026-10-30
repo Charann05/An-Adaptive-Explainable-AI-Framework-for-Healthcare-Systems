@@ -72,4 +72,5 @@ class FeatureImportancePlugin(XAIPlugin):
             prediction=prediction,
             feature_ranking=ranking,
             raw_output=importances.tolist(),
+            metadata={"explanation_scope": "global_model"},
         )

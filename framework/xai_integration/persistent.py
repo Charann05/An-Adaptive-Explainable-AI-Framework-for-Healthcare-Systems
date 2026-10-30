@@ -64,6 +64,10 @@ class PersistentIntegration:
             model_info,
             selector_result,
         )
+        model_info = self._resolve_background_data(
+            model_info,
+            selector_result,
+        )
         technique = selector_result.get("selected")
         if not technique:
             raise ValueError("Cannot integrate without a selected XAI technique.")
@@ -77,6 +81,115 @@ class PersistentIntegration:
         )
         self._write_entrypoint(manifest)
         return manifest
+
+    def _resolve_background_data(
+        self,
+        model_info: dict[str, Any],
+        selector_result: dict[str, Any],
+    ) -> dict[str, Any]:
+        info = dict(model_info)
+        if (
+            info.get("input_type", "").strip().lower() != "tabular"
+            or info.get("background_data") is not None
+        ):
+            return info
+
+        alternatives = selector_result.get("alternatives") or []
+        techniques = {selector_result.get("selected"), *alternatives}
+        if not techniques.intersection({"SHAP", "LIME"}):
+            return info
+
+        import pandas as pd
+
+        excluded_directories = {
+            ".git",
+            ".venv",
+            "venv",
+            "env",
+            "__pycache__",
+            "node_modules",
+        }
+        dataset_paths = [
+            self.project_root / relative_path
+            for relative_path in self._collect_dataset_paths(
+                excluded_directories
+            )
+        ]
+        dataset_paths.sort(
+            key=lambda path: (
+                not any(
+                    token in path.stem.lower()
+                    for token in ("train", "training", "dataset", "data")
+                ),
+                str(path).lower(),
+            )
+        )
+
+        feature_names = info.get("feature_names")
+        for dataset_path in dataset_paths:
+            try:
+                if dataset_path.suffix.lower() == ".csv":
+                    dataframe = pd.read_csv(dataset_path)
+                else:
+                    dataframe = pd.read_excel(dataset_path)
+            except (OSError, ValueError, ImportError, UnicodeDecodeError):
+                continue
+
+            if dataframe.empty:
+                continue
+
+            columns_by_name = {
+                str(column).strip().casefold(): column
+                for column in dataframe.columns
+            }
+            if feature_names:
+                normalized_features = [
+                    str(name).strip().casefold()
+                    for name in feature_names
+                ]
+                if not all(name in columns_by_name for name in normalized_features):
+                    continue
+                selected_columns = [
+                    columns_by_name[name] for name in normalized_features
+                ]
+            else:
+                from ..model_analyzer.read_dataset import detect_target_column
+
+                target_column = detect_target_column(list(dataframe.columns))
+                selected_columns = [
+                    column
+                    for column in dataframe.columns
+                    if column != target_column
+                ]
+                expected_features = info.get("num_inputs")
+                if expected_features and len(selected_columns) != expected_features:
+                    continue
+
+            sample = dataframe.loc[:, selected_columns].sample(
+                n=min(100, len(dataframe)),
+                random_state=0,
+            )
+            sample = sample.astype(object).where(pd.notna(sample), None)
+            info["background_data"] = sample.values.tolist()
+            return info
+
+        return info
+
+    def _collect_dataset_paths(
+        self,
+        excluded_directories: set[str],
+    ) -> list[str]:
+        dataset_extensions = {".csv", ".xls", ".xlsx"}
+        paths = []
+        for path in self.project_root.rglob("*"):
+            if (
+                not path.is_file()
+                or path.suffix.lower() not in dataset_extensions
+                or any(part in excluded_directories for part in path.parts)
+            ):
+                continue
+            paths.append(str(path.relative_to(self.project_root)))
+        return paths
 
     def _resolve_feature_names(
         self,
@@ -149,15 +262,32 @@ from pathlib import Path
 from typing import Any
 
 from framework.xai_integration import load_model, run_explanation
+from framework.xai_integration.exceptions import (
+    ExplanationExecutionError,
+    ModelLoadError,
+)
 from framework.xai_integration.visualization import display_gradcam
+from framework.explanation_generator.generator import format_explanation
+from framework.cli_display import print_explanation_error, print_model_load_error
 
 
 INTEGRATION = {configuration}
-_MODEL = load_model(
-    INTEGRATION["model_path"],
-    INTEGRATION["model_info"]["framework"],
-    INTEGRATION["model_factory"],
-)
+# Change this path to use a different model file.
+MODEL_PATH = Path(INTEGRATION["model_path"])
+# Replace this with representative tabular rows if automatic discovery missed
+# your dataset. SHAP and LIME use this data as explanation background.
+BACKGROUND_DATA = INTEGRATION["model_info"].get("background_data")
+if not MODEL_PATH.is_absolute():
+    MODEL_PATH = Path(__file__).parent / MODEL_PATH
+try:
+    _MODEL = load_model(
+        MODEL_PATH,
+        INTEGRATION["model_info"]["framework"],
+        INTEGRATION["model_factory"],
+    )
+except ModelLoadError as error:
+    print_model_load_error(error)
+    raise SystemExit(1)
 _CONFIG = None
 _CONFIG_PATH = Path(__file__).with_name("adaptive_xai_config.py")
 if _CONFIG_PATH.is_file():
@@ -165,6 +295,21 @@ if _CONFIG_PATH.is_file():
     if spec is not None and spec.loader is not None:
         _CONFIG = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(_CONFIG)
+
+# Add the same preprocessing used when training the model here, if needed.
+# Example:
+#     from loader import scaler
+#     return scaler.transform(input_data)
+def preprocess_input(input_data: Any):
+    return input_data
+
+
+def _apply_preprocessing(input_data: Any):
+    input_data = preprocess_input(input_data)
+    configured_preprocess = getattr(_CONFIG, "preprocess", None)
+    if callable(configured_preprocess):
+        input_data = configured_preprocess(input_data)
+    return input_data
 
 
 def _jsonable(value):
@@ -246,13 +391,14 @@ def _prompt_input():
 
 
 def run(input_data: Any):
-    preprocess = getattr(_CONFIG, "preprocess", None)
-    if callable(preprocess):
-        input_data = preprocess(input_data)
+    input_data = _apply_preprocessing(input_data)
+    model_info = dict(INTEGRATION["model_info"])
+    if BACKGROUND_DATA is not None:
+        model_info["background_data"] = _apply_preprocessing(BACKGROUND_DATA)
     result = run_explanation(
         model=_MODEL,
         input_data=input_data,
-        model_info=INTEGRATION["model_info"],
+        model_info=model_info,
         selector_result=INTEGRATION["selector_result"],
     )
     return _jsonable({{
@@ -281,7 +427,11 @@ if __name__ == "__main__":
         input_data = _load_image(args.input_image)
     else:
         input_data = _prompt_input()
-    output = run(input_data)
+    try:
+        output = run(input_data)
+    except ExplanationExecutionError as error:
+        print_explanation_error(error)
+        raise SystemExit(1) from error
     if output["technique_used"] == "GradCAM":
         visualization_path = display_gradcam(
             input_data,
@@ -293,7 +443,11 @@ if __name__ == "__main__":
             "type": "Grad-CAM overlay",
             "path": str(visualization_path),
         }}
-    print(json.dumps(output, indent=2, default=str))
+    print(format_explanation(
+        output,
+        INTEGRATION["model_info"].get("input_type", ""),
+        output.get("visualization", {{}}).get("path"),
+    ))
 ''',
             encoding="utf-8",
         )
@@ -322,7 +476,7 @@ if __name__ == "__main__":
         return None
 
 
-def find_model_file(project_root: str | Path, framework: str) -> Path:
+def find_model_files(project_root: str | Path, framework: str) -> list[Path]:
     root = Path(project_root).expanduser().resolve()
     normalized = framework.strip().lower()
     extensions = {
@@ -342,10 +496,21 @@ def find_model_file(project_root: str | Path, framework: str) -> Path:
         and path.suffix.lower() in extensions
         and not any(part in excluded for part in path.parts)
     ]
+    candidates.sort(
+        key=lambda path: (
+            "model" not in path.stem.lower(),
+            str(path).lower(),
+        )
+    )
+    return candidates
+
+
+def find_model_file(project_root: str | Path, framework: str) -> Path:
+    candidates = find_model_files(project_root, framework)
     if not candidates:
+        root = Path(project_root).expanduser().resolve()
         raise FileNotFoundError(
             f"Could not find a {framework} model file in {root}. "
             "Pass the model path to integrate a specific model."
         )
-    candidates.sort(key=lambda path: ("model" not in path.stem.lower(), str(path).lower()))
     return candidates[0]

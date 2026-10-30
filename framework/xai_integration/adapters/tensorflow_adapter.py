@@ -9,6 +9,33 @@ class TensorFlowAdapter(ModelAdapter):
 
     framework = "tensorflow"
 
+    @staticmethod
+    def _match_input_structure(model: Any, input_data: Any) -> Any:
+        expected_inputs = getattr(model, "input", None)
+        if expected_inputs is None:
+            return input_data
+
+        if isinstance(expected_inputs, (list, tuple)):
+            if (
+                len(expected_inputs) == 1
+                and not isinstance(input_data, (list, tuple))
+            ):
+                return type(expected_inputs)((input_data,))
+            return input_data
+
+        if (
+            isinstance(input_data, (list, tuple))
+            and len(input_data) == 1
+            and hasattr(input_data[0], "shape")
+        ):
+            expected_shape = getattr(expected_inputs, "shape", None)
+            received_shape = input_data[0].shape
+            if expected_shape is not None and len(expected_shape) == len(
+                received_shape
+            ):
+                return input_data[0]
+        return input_data
+
     def can_handle(
         self,
         model: Any,
@@ -31,7 +58,7 @@ class TensorFlowAdapter(ModelAdapter):
         model: Any,
         input_data: Any,
     ) -> Any:
-
+        input_data = self._match_input_structure(model, input_data)
         return model(
             input_data,
             training=False,
@@ -94,6 +121,7 @@ class TensorFlowAdapter(ModelAdapter):
             inputs=model.inputs,
             outputs=[target_layer.output, model.output],
         )
+        input_data = self._match_input_structure(grad_model, input_data)
         with tf.GradientTape() as tape:
             conv_output, predictions = grad_model(input_data, training=False)
             loss = predictions[:, prediction]

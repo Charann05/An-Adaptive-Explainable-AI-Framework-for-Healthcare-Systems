@@ -10,7 +10,7 @@ SUPPORTED_EXTENSIONS = {
 EXCLUDED_DIRECTORIES = {
     ".git", ".venv", "venv", "env", "__pycache__", "node_modules",
 }
-EXCLUDED_FILES = {"model_report.json"}
+EXCLUDED_FILES = {"model_report.json", "adap_xai.py"}
 
 
 def _is_excluded_file(file):

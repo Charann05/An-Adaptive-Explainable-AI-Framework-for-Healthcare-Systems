@@ -58,6 +58,7 @@ def prepare_model_dependencies(framework, model_path=None):
         and Path(model_path).suffix.lower() in {".pkl", ".pickle", ".joblib"}
     ):
         dependencies = [
+            *MODEL_DEPENDENCIES["xgboost"],
             {
                 "pip": "joblib",
                 "import": "joblib",
