@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptive-xai"
-version = "0.2.14"
-description = "Add a custom entry point to the xai_selector"
+version = "0.2.15"
+description = "Fix : gradcam plugin"
 readme = "README.md"
 requires-python = ">=3.14"
 

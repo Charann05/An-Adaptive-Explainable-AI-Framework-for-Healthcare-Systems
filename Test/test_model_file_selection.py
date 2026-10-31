@@ -19,6 +19,96 @@ from framework.xai_integration.persistent import (
 
 
 class ModelFileSelectionTests(unittest.TestCase):
+    def test_generated_runner_clears_heatmap_and_loads_tensorflow_images_nhwc(self):
+        try:
+            from PIL import Image
+        except ImportError as error:
+            self.skipTest(f"Image dependencies are unavailable: {error}")
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            integration = PersistentIntegration(project)
+            integration._write_entrypoint(
+                IntegrationManifest(
+                    model_path=str(project / "model.keras"),
+                    model_info={
+                        "framework": "tensorflow",
+                        "input_type": "Image",
+                    },
+                    selector_result={"selected": "GradCAM"},
+                    technique="GradCAM",
+                )
+            )
+            tree = ast.parse(
+                integration.entrypoint.read_text(encoding="utf-8")
+            )
+
+            old_heatmap = project / "gradcam_explanation.png"
+            old_heatmap.write_bytes(b"old heatmap")
+            startup_cleanup = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.If)
+                and isinstance(node.test, ast.Compare)
+                and isinstance(node.test.left, ast.Name)
+                and node.test.left.id == "__name__"
+            )
+            visualization_path_assignment = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name)
+                    and target.id == "VISUALIZATION_PATH"
+                    for target in node.targets
+                )
+            )
+            exec(
+                compile(
+                    ast.Module(
+                        body=[
+                            visualization_path_assignment,
+                            startup_cleanup,
+                        ],
+                        type_ignores=[],
+                    ),
+                    str(integration.entrypoint),
+                    "exec",
+                ),
+                {
+                    "__name__": "__main__",
+                    "__file__": str(integration.entrypoint),
+                    "Path": Path,
+                },
+            )
+            self.assertFalse(old_heatmap.exists())
+
+            image_loader = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name == "_load_image"
+            )
+            namespace = {
+                "INTEGRATION": {
+                    "model_info": {"framework": "tensorflow"},
+                },
+            }
+            exec(
+                compile(
+                    ast.Module(body=[image_loader], type_ignores=[]),
+                    str(integration.entrypoint),
+                    "exec",
+                ),
+                namespace,
+            )
+            image_path = project / "input.png"
+            Image.new("RGB", (4, 4), (255, 0, 0)).save(image_path)
+            loaded_image = namespace["_load_image"](str(image_path))
+
+            self.assertEqual(loaded_image.shape, (1, 224, 224, 3))
+            self.assertEqual(loaded_image[0, 0, 0].tolist(), [1.0, 0.0, 0.0])
+
     def test_lists_matching_files_in_existing_preference_order(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
@@ -59,10 +149,27 @@ class ModelFileSelectionTests(unittest.TestCase):
                 generated_source,
             )
             self.assertIn(
+                'VISUALIZATION_PATH = Path(__file__).with_name("gradcam_explanation.png")',
+                generated_source,
+            )
+            self.assertIn(
+                "VISUALIZATION_PATH.unlink(missing_ok=True)",
+                generated_source,
+            )
+            self.assertLess(
+                generated_source.index("VISUALIZATION_PATH.unlink(missing_ok=True)"),
+                generated_source.index("MODEL_PATH = Path(INTEGRATION"),
+            )
+            self.assertIn(
                 "        MODEL_PATH,",
                 generated_source,
             )
             self.assertIn("BACKGROUND_DATA =", generated_source)
+            self.assertIn(
+                'framework in {"tensorflow", "keras"}',
+                generated_source,
+            )
+            self.assertIn("return array[np.newaxis, ...]", generated_source)
             self.assertIn("def preprocess_input(input_data: Any):", generated_source)
             self.assertIn("def _apply_preprocessing(input_data: Any):", generated_source)
             self.assertIn(

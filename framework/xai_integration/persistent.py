@@ -272,6 +272,9 @@ from framework.cli_display import print_explanation_error, print_model_load_erro
 
 
 INTEGRATION = {configuration}
+VISUALIZATION_PATH = Path(__file__).with_name("gradcam_explanation.png")
+if __name__ == "__main__":
+    VISUALIZATION_PATH.unlink(missing_ok=True)
 # Change this path to use a different model file.
 MODEL_PATH = Path(INTEGRATION["model_path"])
 # Replace this with representative tabular rows if automatic discovery missed
@@ -327,24 +330,31 @@ def _jsonable(value):
 
 
 def _load_image(path: str):
-    try:
-        from src.data import basic_preprocess, get_transforms
-        import cv2
+    framework = INTEGRATION["model_info"].get("framework", "").strip().lower()
+    if framework == "pytorch":
+        try:
+            from src.data import basic_preprocess, get_transforms
+            import cv2
 
-        image = cv2.imread(path)
-        if image is None:
-            raise FileNotFoundError(f"Could not read image: {{path}}")
-        image = image[:, :, ::-1]
-        image = basic_preprocess(image)
-        return get_transforms(train=False)(image=image)["image"].unsqueeze(0)
-    except ImportError:
-        from PIL import Image
-        import numpy as np
-        import torch
+            image = cv2.imread(path)
+            if image is None:
+                raise FileNotFoundError(f"Could not read image: {{path}}")
+            image = image[:, :, ::-1]
+            image = basic_preprocess(image)
+            return get_transforms(train=False)(image=image)["image"].unsqueeze(0)
+        except ImportError:
+            pass
 
-        image = Image.open(path).convert("RGB").resize((224, 224))
-        array = np.asarray(image, dtype=np.float32) / 255.0
-        return torch.from_numpy(array.transpose(2, 0, 1)).unsqueeze(0)
+    from PIL import Image
+    import numpy as np
+
+    image = Image.open(path).convert("RGB").resize((224, 224))
+    array = np.asarray(image, dtype=np.float32) / 255.0
+    if framework in {{"tensorflow", "keras"}}:
+        return array[np.newaxis, ...]
+    import torch
+
+    return torch.from_numpy(array.transpose(2, 0, 1)).unsqueeze(0)
 
 
 def _prompt_input():
@@ -436,7 +446,7 @@ if __name__ == "__main__":
         visualization_path = display_gradcam(
             input_data,
             output["raw_output"],
-            Path(__file__).with_name("gradcam_explanation.png"),
+            VISUALIZATION_PATH,
             f"Grad-CAM explanation for prediction {{output['prediction']}}",
         )
         output["visualization"] = {{
