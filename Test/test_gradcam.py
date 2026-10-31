@@ -10,9 +10,9 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.plugins.gradcam_plugin import GradCAMPlugin
-from framework.xai_integration.adapters.pytorch_adapter import PyTorchAdapter
-from framework.xai_integration.adapters.tensorflow_adapter import TensorFlowAdapter
+from adaptive_xai.xai_integration.plugins.gradcam_plugin import GradCAMPlugin
+from adaptive_xai.xai_integration.adapters.pytorch_adapter import PyTorchAdapter
+from adaptive_xai.xai_integration.adapters.tensorflow_adapter import TensorFlowAdapter
 
 MODEL_PATH = Path(__file__).with_name("test_cnn_model.pt")
 
@@ -179,7 +179,7 @@ class GradCAMIntegrationTests(unittest.TestCase):
         except ImportError as error:
             self.skipTest(f"Grad-CAM dependencies are unavailable: {error}")
 
-        from framework.xai_integration.engine import run_explanation
+        from adaptive_xai.xai_integration.engine import run_explanation
 
         model = torch.load(MODEL_PATH, weights_only=False)
         result = run_explanation(

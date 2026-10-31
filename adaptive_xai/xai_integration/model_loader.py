@@ -140,7 +140,7 @@ class ModelLoader:
                 "Model framework was not provided."
             )
 
-        return framework.strip().lower()
+        return adaptive_xai.strip().lower()
 
     @staticmethod
     def _load_pytorch(path: Path, model_factory: str | None = None):
@@ -382,7 +382,7 @@ def load_model(
     model_factory: str | None = None,
 ):
     """
-    Public helper used by the rest of the framework.
+    Public helper used by the rest of the adaptive_xai.
     """
 
     return model_loader.load(

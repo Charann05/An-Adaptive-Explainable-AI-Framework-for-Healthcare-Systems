@@ -12,7 +12,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_selector import cli
+from adaptive_xai.xai_selector import cli
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +25,7 @@ class XaiSelectorCliTests(unittest.TestCase):
 
         self.assertEqual(
             scripts["xai-select"],
-            "framework.xai_selector.cli:main",
+            "adaptive_xai.xai_selector.cli:main",
         )
 
     def test_continues_setup_from_report_without_running_analyzer(self):

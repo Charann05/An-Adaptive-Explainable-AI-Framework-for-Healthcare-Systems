@@ -10,7 +10,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.persistent import (
+from adaptive_xai.xai_integration.persistent import (
     IntegrationManifest,
     PersistentIntegration,
     find_model_file,

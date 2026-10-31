@@ -9,8 +9,8 @@ if __package__:
 else:
     import _bootstrap
 
-from framework import run
-from framework.model_analyzer.report_generator import generate_report
+from adaptive_xai import run
+from adaptive_xai.model_analyzer.report_generator import generate_report
 
 
 class FeatureMetadataPromptTests(unittest.TestCase):

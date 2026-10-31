@@ -8,7 +8,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.plugins.lime_plugin import LIMEPlugin
+from adaptive_xai.xai_integration.plugins.lime_plugin import LIMEPlugin
 
 MODEL_PATH = Path(__file__).with_name("test_rf_model.pkl")
 
@@ -88,7 +88,7 @@ class LIMEIntegrationTests(unittest.TestCase):
         except ImportError as error:
             self.skipTest(f"LIME dependencies are unavailable: {error}")
 
-        from framework.xai_integration.engine import run_explanation
+        from adaptive_xai.xai_integration.engine import run_explanation
         model = joblib.load(MODEL_PATH)
         result = run_explanation(
             model=model,

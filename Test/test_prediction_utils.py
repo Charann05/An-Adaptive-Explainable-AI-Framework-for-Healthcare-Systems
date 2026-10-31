@@ -11,11 +11,11 @@ else:
 
 import numpy as np
 
-from framework.xai_integration.adapters.tensorflow_adapter import (
+from adaptive_xai.xai_integration.adapters.tensorflow_adapter import (
     TensorFlowAdapter,
 )
-from framework.xai_integration.adapters.pytorch_adapter import PyTorchAdapter
-from framework.xai_integration.prediction_utils import (
+from adaptive_xai.xai_integration.adapters.pytorch_adapter import PyTorchAdapter
+from adaptive_xai.xai_integration.prediction_utils import (
     predicted_class_and_confidence,
     predicted_value,
 )

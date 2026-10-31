@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-from framework.model_analyzer.analyzer import analyze_model
+from adaptive_xai.model_analyzer.analyzer import analyze_model
 
 EVALUATION_DIR = Path(__file__).resolve().parent
 BENCHMARK_ROOT = EVALUATION_DIR / "benchmark_projects"

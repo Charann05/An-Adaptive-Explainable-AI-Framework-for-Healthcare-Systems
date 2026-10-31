@@ -19,7 +19,7 @@ class FeatureImportanceIntegrationTests(unittest.TestCase):
         except ImportError as error:
             self.skipTest(f"joblib is unavailable: {error}")
 
-        from framework.xai_integration.engine import run_explanation
+        from adaptive_xai.xai_integration.engine import run_explanation
 
         model = joblib.load(MODEL_PATH)
         result = run_explanation(

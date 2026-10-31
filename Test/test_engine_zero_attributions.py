@@ -7,8 +7,8 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.engine import XAIIntegrationEngine
-from framework.xai_integration.output_schema import ExplanationResult
+from adaptive_xai.xai_integration.engine import XAIIntegrationEngine
+from adaptive_xai.xai_integration.output_schema import ExplanationResult
 
 
 class _FakePlugin:
@@ -51,14 +51,14 @@ class EngineZeroAttributionTests(unittest.TestCase):
 
         with (
             patch(
-                "framework.xai_integration.engine.resolve_adapter",
+                "adaptive_xai.xai_integration.engine.resolve_adapter",
                 return_value=object(),
             ),
             patch(
-                "framework.xai_integration.engine.prepare_dependencies",
+                "adaptive_xai.xai_integration.engine.prepare_dependencies",
                 return_value=SimpleNamespace(available=True),
             ),
-            patch("framework.xai_integration.engine.get_plugin", side_effect=get_plugin),
+            patch("adaptive_xai.xai_integration.engine.get_plugin", side_effect=get_plugin),
         ):
             result = XAIIntegrationEngine().explain(
                 model=object(),

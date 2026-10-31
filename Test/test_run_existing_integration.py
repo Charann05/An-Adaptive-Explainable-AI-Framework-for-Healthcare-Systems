@@ -11,7 +11,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework import run
+from adaptive_xai import run
 
 
 class ExistingIntegrationStartupTests(unittest.TestCase):

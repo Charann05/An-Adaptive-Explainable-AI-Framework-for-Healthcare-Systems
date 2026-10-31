@@ -35,7 +35,7 @@ def prepare_dependencies(xai_technique):
 
 
 def prepare_model_dependencies(framework, model_path=None):
-    framework_key = framework.strip().lower()
+    framework_key = adaptive_xai.strip().lower()
     aliases = {
         "pytorch": "pytorch",
         "torch": "pytorch",

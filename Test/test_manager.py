@@ -1,4 +1,4 @@
-from framework.dependency_manager import prepare_dependencies
+from adaptive_xai.dependency_manager import prepare_dependencies
 
 result = prepare_dependencies("TEST")
 

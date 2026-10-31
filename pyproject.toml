@@ -18,13 +18,13 @@ dependencies = [
 
 
 [project.scripts]
-adaptive-xai = "framework.run:main"
-analyze = "framework.model_analyzer.analyzer:main"
-xai-select = "framework.xai_selector.cli:main"
-convert = "framework.notebook_converter:main"
+adaptive-xai = "adaptive_xai.run:main"
+analyze = "adaptive_xai.model_analyzer.analyzer:main"
+xai-select = "adaptive_xai.xai_selector.cli:main"
+convert = "adaptive_xai.notebook_converter:main"
 
 [tool.setuptools.packages.find]
-include = ["framework*"]
+include = ["adaptive_xai*"]
 
 [tool.setuptools.package-data]
-"framework.explanation_generator" = ["templates/*.json"]
+"adaptive_xai.explanation_generator" = ["templates/*.json"]

@@ -12,10 +12,10 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.dependency_manager.manager import prepare_model_dependencies
-from framework.xai_integration.exceptions import ModelLoadError
-from framework.xai_integration.model_loader import ModelLoader
-from framework.cli_display import print_model_load_error
+from adaptive_xai.dependency_manager.manager import prepare_model_dependencies
+from adaptive_xai.xai_integration.exceptions import ModelLoadError
+from adaptive_xai.xai_integration.model_loader import ModelLoader
+from adaptive_xai.cli_display import print_model_load_error
 
 
 class XGBoostPickleDependencyTests(unittest.TestCase):
@@ -86,7 +86,7 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
 
         try:
             with patch(
-                "framework.xai_integration.model_loader.importlib."
+                "adaptive_xai.xai_integration.model_loader.importlib."
                 "import_module",
                 side_effect=import_module,
             ):
@@ -122,7 +122,7 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
 
         try:
             with patch(
-                "framework.xai_integration.model_loader.importlib."
+                "adaptive_xai.xai_integration.model_loader.importlib."
                 "import_module",
                 side_effect=import_module,
             ):
@@ -144,7 +144,7 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
 
             with (
                 patch(
-                    "framework.xai_integration.model_loader."
+                    "adaptive_xai.xai_integration.model_loader."
                     "prepare_model_dependencies",
                     side_effect=[
                         {"failed": []},
@@ -182,7 +182,7 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
 
             with (
                 patch(
-                    "framework.xai_integration.model_loader."
+                    "adaptive_xai.xai_integration.model_loader."
                     "prepare_model_dependencies",
                     side_effect=[
                         {"failed": []},
@@ -206,7 +206,7 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
 
     def test_xgboost_pickle_dependency_set_includes_xgboost_and_joblib(self):
         with patch(
-            "framework.dependency_manager.manager._prepare_packages",
+            "adaptive_xai.dependency_manager.manager._prepare_packages",
             return_value={"installed": [], "failed": []},
         ) as prepare_packages:
             prepare_model_dependencies("xgboost", "model.pkl")

@@ -3,7 +3,7 @@ Parses the Model Analyzer's JSON report.
 
 The Model Analyzer already produces a structured JSON file, so this
 module simply loads the JSON and normalizes the field names
-(lowercase + trimmed) for consistency across the framework.
+(lowercase + trimmed) for consistency across the adaptive_xai.
 """
 
 import json

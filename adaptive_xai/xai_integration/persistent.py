@@ -261,17 +261,17 @@ import json
 from pathlib import Path
 from typing import Any
 
-from framework.xai_integration import load_model, run_explanation
-from framework.xai_integration.exceptions import (
+from adaptive_xai.xai_integration import load_model, run_explanation
+from adaptive_xai.xai_integration.exceptions import (
     ExplanationExecutionError,
     ModelLoadError,
 )
-from framework.xai_integration.visualization import display_gradcam
-from framework.explanation_generator.generator import (
+from adaptive_xai.xai_integration.visualization import display_gradcam
+from adaptive_xai.explanation_generator.generator import (
     format_explanation,
     format_xai_output,
 )
-from framework.cli_display import print_explanation_error, print_model_load_error
+from adaptive_xai.cli_display import print_explanation_error, print_model_load_error
 
 
 INTEGRATION = {configuration}
@@ -491,7 +491,7 @@ if __name__ == "__main__":
 
 def find_model_files(project_root: str | Path, framework: str) -> list[Path]:
     root = Path(project_root).expanduser().resolve()
-    normalized = framework.strip().lower()
+    normalized = adaptive_xai.strip().lower()
     extensions = {
         "pytorch": {".pt", ".pth", ".bin"},
         "tensorflow": {".keras", ".h5", ".hdf5"},

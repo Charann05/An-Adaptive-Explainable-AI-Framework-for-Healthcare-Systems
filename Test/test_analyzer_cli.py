@@ -8,7 +8,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.model_analyzer import analyzer
+from adaptive_xai.model_analyzer import analyzer
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -21,7 +21,7 @@ class AnalyzerCliTests(unittest.TestCase):
 
         self.assertEqual(
             project_config["project"]["scripts"]["analyze"],
-            "framework.model_analyzer.analyzer:main",
+            "adaptive_xai.model_analyzer.analyzer:main",
         )
 
     def test_main_runs_model_analyzer_only(self):

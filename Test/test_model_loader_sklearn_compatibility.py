@@ -14,11 +14,11 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.model_loader import ModelLoader
-from framework.xai_integration.exceptions import (
+from adaptive_xai.xai_integration.model_loader import ModelLoader
+from adaptive_xai.xai_integration.exceptions import (
     ModelCompatibilityError,
 )
-from framework.cli_display import (
+from adaptive_xai.cli_display import (
     print_model_compatibility_error,
     print_model_load_error,
 )
@@ -53,7 +53,7 @@ class SklearnModelLoaderCompatibilityTests(unittest.TestCase):
 
             with (
                 patch(
-                    "framework.xai_integration.model_loader."
+                    "adaptive_xai.xai_integration.model_loader."
                     "prepare_model_dependencies",
                     return_value={"failed": []},
                 ),
@@ -94,7 +94,7 @@ class SklearnModelLoaderCompatibilityTests(unittest.TestCase):
 
             with (
                 patch(
-                    "framework.xai_integration.model_loader."
+                    "adaptive_xai.xai_integration.model_loader."
                     "prepare_model_dependencies",
                     return_value={"failed": []},
                 ),
@@ -165,7 +165,7 @@ class SklearnModelLoaderCompatibilityTests(unittest.TestCase):
                     joblib.dump(model, model_path)
 
                 with patch(
-                    "framework.xai_integration.model_loader."
+                    "adaptive_xai.xai_integration.model_loader."
                     "prepare_model_dependencies",
                     return_value={"failed": []},
                 ):

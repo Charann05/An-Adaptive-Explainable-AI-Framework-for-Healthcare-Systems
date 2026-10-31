@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from framework.run import run_project
+from adaptive_xai.run import run_project
 
 
 REQUIRED_REPORT_FIELDS = ("framework", "architecture", "input_type")

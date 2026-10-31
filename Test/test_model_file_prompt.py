@@ -8,7 +8,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.run import prompt_for_model_file
+from adaptive_xai.run import prompt_for_model_file
 
 
 class PromptForModelFileTests(unittest.TestCase):

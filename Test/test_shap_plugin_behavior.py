@@ -10,7 +10,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.plugins.shap_plugin import SHAPPlugin
+from adaptive_xai.xai_integration.plugins.shap_plugin import SHAPPlugin
 
 
 class _Adapter:

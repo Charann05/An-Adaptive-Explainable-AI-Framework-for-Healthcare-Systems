@@ -9,7 +9,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.manual_detection import detect_manual_xai_usage
+from adaptive_xai.xai_integration.manual_detection import detect_manual_xai_usage
 
 
 class ManualXaiDetectionTests(unittest.TestCase):

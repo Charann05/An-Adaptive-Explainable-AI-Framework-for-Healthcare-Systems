@@ -95,7 +95,7 @@ class ModelAdapter(ABC):
         prediction: int,
     ) -> Any:
         """
-        Run Grad-CAM for this framework.
+        Run Grad-CAM for this adaptive_xai.
 
         Framework-specific gradient implementations belong in concrete
         adapters, not in this base class.

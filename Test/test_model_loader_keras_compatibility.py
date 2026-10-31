@@ -9,7 +9,7 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.xai_integration.model_loader import (
+from adaptive_xai.xai_integration.model_loader import (
     ModelLoader,
     _keras_legacy_custom_objects,
 )

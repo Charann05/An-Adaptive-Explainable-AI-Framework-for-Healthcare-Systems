@@ -93,7 +93,7 @@ commands that are not valid in a normal script.
 The repository is organized as follows:
 
 ```text
-framework/
+adaptive_xai/
 ├── __init__.py
 ├── run.py                     # orchestration entry point
 ├── cli_display.py             # terminal output and UI helpers
@@ -102,12 +102,13 @@ framework/
 ├── dependency_manager/       # dependency preparation and validation
 ├── xai_integration/          # model loading, plugin integration, execution
 ├── explanation_generator/    # template-based explanation rendering
+├── notebook_converter.py     # notebook-to-Python conversion tool
 └── ...
 ```
 
 ## Module responsibilities
 
-### `framework/model_analyzer/`
+### `adaptive_xai/model_analyzer/`
 
 Responsible for inferring project and model characteristics including:
 
@@ -120,7 +121,7 @@ Responsible for inferring project and model characteristics including:
 
 It writes a `model_report.json` that summarizes the inferred profile.
 
-### `framework/xai_selector/`
+### `adaptive_xai/xai_selector/`
 
 Selects a compatible XAI method based on the model profile and other signals.
 It includes:
@@ -129,12 +130,12 @@ It includes:
 - recommendation/ranking support
 - CLI tooling for continuing from a saved report
 
-### `framework/dependency_manager/`
+### `adaptive_xai/dependency_manager/`
 
 Prepares dependencies required by the selected explanation method and checks
 whether required libraries are available.
 
-### `framework/xai_integration/`
+### `adaptive_xai/xai_integration/`
 
 Handles the execution side of XAI integration, including:
 
@@ -144,7 +145,7 @@ Handles the execution side of XAI integration, including:
 - output schema definition
 - persistent integration generation for project use
 
-### `framework/explanation_generator/`
+### `adaptive_xai/explanation_generator/`
 
 Transforms structured XAI outputs into readable and presentation-friendly text.
 

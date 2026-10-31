@@ -7,12 +7,12 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.model_analyzer.load_model_files import (
+from adaptive_xai.model_analyzer.load_model_files import (
     collect_files,
     is_valid_project_folder,
 )
-from framework.model_analyzer.classify_file_type import get_file_info
-from framework.model_analyzer.read_input_type import detect_input_type
+from adaptive_xai.model_analyzer.classify_file_type import get_file_info
+from adaptive_xai.model_analyzer.read_input_type import detect_input_type
 
 
 class ModelAnalyzerFileCollectionTests(unittest.TestCase):

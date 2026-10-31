@@ -7,11 +7,11 @@ if __package__:
 else:
     import _bootstrap
 
-from framework.explanation_generator.generator import (
+from adaptive_xai.explanation_generator.generator import (
     format_explanation,
     format_xai_output,
 )
-from framework.explanation_generator.template_engine import TemplateEngine
+from adaptive_xai.explanation_generator.template_engine import TemplateEngine
 
 
 class ExplanationFormatterTests(unittest.TestCase):
