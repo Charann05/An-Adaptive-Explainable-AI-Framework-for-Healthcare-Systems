@@ -3,7 +3,7 @@ from ..base_plugin import XAIPlugin
 from ..output_schema import ExplanationResult
 from ..plugin_registry import register_plugin
 from ..adapters import resolve_adapter
-from ..prediction_utils import predicted_value
+from ..prediction_utils import predicted_value, to_numpy
 
 
 @register_plugin("LIME")
@@ -15,8 +15,6 @@ class LIMEPlugin(XAIPlugin):
         return model_info.get("input_type") in ("Tabular", "Image", "Text")
 
     def explain(self, model, input_data, model_info: dict, adapter=None) -> ExplanationResult:
-        import numpy as np
-
         if adapter is None:
             adapter = resolve_adapter(model, model_info)
 
@@ -109,9 +107,9 @@ class LIMEPlugin(XAIPlugin):
                 else np.asarray(output)
             )
 
-        image = np.asarray(input_data[0])
-        if hasattr(image, "detach"):
-            image = image.detach().numpy()
+        image = to_numpy(input_data)
+        if image.ndim == 4:
+            image = image[0]
         if image.shape[0] in (1, 3):
             image = np.transpose(image, (1, 2, 0))
 

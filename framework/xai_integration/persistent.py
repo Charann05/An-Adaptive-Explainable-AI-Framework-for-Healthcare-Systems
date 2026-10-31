@@ -267,7 +267,10 @@ from framework.xai_integration.exceptions import (
     ModelLoadError,
 )
 from framework.xai_integration.visualization import display_gradcam
-from framework.explanation_generator.generator import format_explanation
+from framework.explanation_generator.generator import (
+    format_explanation,
+    format_xai_output,
+)
 from framework.cli_display import print_explanation_error, print_model_load_error
 
 
@@ -453,11 +456,11 @@ if __name__ == "__main__":
             "type": "Grad-CAM overlay",
             "path": str(visualization_path),
         }}
-    print(format_explanation(
-        output,
-        INTEGRATION["model_info"].get("input_type", ""),
-        output.get("visualization", {{}}).get("path"),
-    ))
+    input_type = INTEGRATION["model_info"].get("input_type", "")
+    visualization_path = output.get("visualization", {{}}).get("path")
+    print(format_xai_output(output, input_type, visualization_path))
+    print()
+    print(format_explanation(output, input_type, visualization_path))
 ''',
             encoding="utf-8",
         )

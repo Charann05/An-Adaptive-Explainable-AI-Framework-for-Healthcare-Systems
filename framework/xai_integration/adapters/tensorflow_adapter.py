@@ -69,11 +69,9 @@ class TensorFlowAdapter(ModelAdapter):
         model: Any,
         input_data: Any,
     ) -> Any:
+        from ..prediction_utils import probability_matrix
 
-        return self.predict(
-            model,
-            input_data,
-        )
+        return probability_matrix(self.predict(model, input_data))
 
     def get_layers(
         self,
@@ -124,7 +122,11 @@ class TensorFlowAdapter(ModelAdapter):
         input_data = self._match_input_structure(grad_model, input_data)
         with tf.GradientTape() as tape:
             conv_output, predictions = grad_model(input_data, training=False)
-            loss = predictions[:, prediction]
+            if predictions.shape[-1] == 1:
+                score = predictions[:, 0]
+                loss = score if prediction == 1 else -score
+            else:
+                loss = predictions[:, prediction]
 
         grads = tape.gradient(loss, conv_output)
         pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))

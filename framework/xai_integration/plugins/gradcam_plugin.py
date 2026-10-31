@@ -20,7 +20,7 @@ class GradCAMPlugin(XAIPlugin):
             raise ValueError(f"{adapter.framework} adapter does not support Grad-CAM.")
 
         target_layer, target_layer_name = adapter.get_last_conv_layer(model)
-        prediction_output = adapter.predict_proba(model, input_data)
+        prediction_output = adapter.predict(model, input_data)
         prediction, confidence = predicted_class_and_confidence(prediction_output)
         confidence *= 100
 

@@ -31,6 +31,22 @@ class PyTorchAdapter(ModelAdapter):
 
         import torch
 
+        parameter = next(model.parameters(), None)
+        dtype = (
+            parameter.dtype
+            if parameter is not None and parameter.is_floating_point()
+            else torch.float32
+        )
+        if not isinstance(input_data, torch.Tensor):
+            input_data = torch.as_tensor(input_data, dtype=dtype)
+        if parameter is not None:
+            input_data = input_data.to(
+                device=parameter.device,
+                dtype=dtype,
+            )
+        elif not input_data.is_floating_point():
+            input_data = input_data.to(dtype=dtype)
+
         model.eval()
 
         with torch.no_grad():
@@ -42,17 +58,13 @@ class PyTorchAdapter(ModelAdapter):
         input_data: Any,
     ) -> Any:
 
-        import torch
-
         output = self.predict(
             model,
             input_data,
         )
+        from ..prediction_utils import probability_matrix
 
-        return torch.softmax(
-            output,
-            dim=-1,
-        )
+        return probability_matrix(output)
 
     def get_layers(
         self,
@@ -96,12 +108,19 @@ class PyTorchAdapter(ModelAdapter):
 
     def run_gradcam(self, model, input_data, target_layer, prediction: int):
         from pytorch_grad_cam import GradCAM
-        from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
         cam = GradCAM(model=model, target_layers=[target_layer])
+
+        def target(model_output):
+            scores = model_output.reshape(model_output.shape[0], -1)
+            if scores.shape[1] == 1:
+                score = scores[:, 0]
+                return score if prediction == 1 else -score
+            return scores[:, prediction]
+
         return cam(
             input_tensor=input_data,
-            targets=[ClassifierOutputTarget(prediction)],
+            targets=[target],
         )
 
     def get_feature_importances(
