@@ -1,0 +1,5 @@
+{
+  "heatmap": "Grad-CAM visualization: {visualization_path}",
+  "explanation": "The highlighted areas show which parts of the image were related to the model's answer. A highlight does not mean that area caused the condition.",
+  "mask_explanation": "The highlighted areas show which parts of the image were related to the model's answer. A highlight does not mean that area caused the condition."
+}

@@ -1,0 +1,22 @@
+
+{
+  "xai_output_heading": "XAI output ({technique})",
+  "human_explanation_heading": "In simple terms",
+  "prediction_line": "Prediction: {prediction}",
+  "confidence_line": "Reported model confidence: {confidence:.1f}%",
+  "prediction_summary": "The model's answer is: {prediction}.",
+  "confidence_explanation": "The model gave this answer a score of {confidence:.1f}%. This score does not tell us how certain the answer is in real life.",
+  "attributions_heading": "Feature attributions:",
+  "output_factor": "  {feature}: {sign}{score:g} (relative magnitude: {percentage:.1f}%)",
+  "relative_attribution_note": "Relative magnitudes are normalized across the features shown; they are not probabilities.",
+  "image_attribution_available": "The model marked parts of the image that were related to its answer.",
+  "generic_image_explanation": "The highlighted areas show which parts of the image were related to the model's answer. A highlight does not mean that area caused the condition.",
+  "lead": "The features that mattered most to the model for this answer were:",
+  "supporting_factor": "{feature} was {strength}, and it pointed the model toward this answer.",
+  "opposing_factor": "{feature} was {strength}, and it pointed the model away from this answer.",
+  "neutral_factor": "{feature} did not clearly push the model toward or away from this answer.",
+  "scope": "These clues help show how the model reached its answer. They do not prove that a feature caused the result.",
+  "no_attributions": "The model did not provide details about what influenced its answer.",
+  "no_explanation": "There is not enough information to explain why the model gave this answer.",
+  "medical_disclaimer": "This is an AI estimate, not a medical diagnosis."
+}

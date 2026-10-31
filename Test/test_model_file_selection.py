@@ -165,6 +165,23 @@ class ModelFileSelectionTests(unittest.TestCase):
                 generated_source,
             )
             self.assertIn("BACKGROUND_DATA =", generated_source)
+            self.assertIn("format_xai_output", generated_source)
+            self.assertIn(
+                "print(format_xai_output(output, input_type, visualization_path))",
+                generated_source,
+            )
+            self.assertIn(
+                "print(format_explanation(output, input_type, visualization_path))",
+                generated_source,
+            )
+            self.assertLess(
+                generated_source.index(
+                    "print(format_xai_output(output, input_type, visualization_path))"
+                ),
+                generated_source.index(
+                    "print(format_explanation(output, input_type, visualization_path))"
+                ),
+            )
             self.assertIn(
                 'framework in {"tensorflow", "keras"}',
                 generated_source,

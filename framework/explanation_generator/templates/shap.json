@@ -1,0 +1,9 @@
+{
+  "output_heading": "SHAP feature attributions:",
+  "output_factor": "  {feature}: {sign}{score:g} (relative magnitude: {percentage:.1f}%)",
+  "lead": "The features that mattered most to the model for this answer were:",
+  "supporting_factor": "{feature} was {strength}, and it pointed the model toward this answer.",
+  "opposing_factor": "{feature} was {strength}, and it pointed the model away from this answer.",
+  "neutral_factor": "{feature} did not clearly push the model toward or away from this answer.",
+  "scope": "These clues help show how the model reached its answer. They do not prove that a feature caused the result."
+}

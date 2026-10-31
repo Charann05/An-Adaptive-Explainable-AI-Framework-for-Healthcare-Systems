@@ -1,0 +1,10 @@
+{
+  "output_heading": "LIME feature attributions:",
+  "output_factor": "  {feature}: {sign}{score:g} (relative magnitude: {percentage:.1f}%)",
+  "lead": "The features that mattered most to the model for this answer were:",
+  "supporting_factor": "{feature} was {strength}, and it pointed the model toward this answer.",
+  "opposing_factor": "{feature} was {strength}, and it pointed the model away from this answer.",
+  "neutral_factor": "{feature} did not clearly push the model toward or away from this answer.",
+  "scope": "These clues can change when checked again. They help describe the model's answer but do not prove what caused it.",
+  "mask_explanation": "The highlighted areas show which parts of the image were related to the model's answer. A highlight does not mean that area caused the condition."
+}

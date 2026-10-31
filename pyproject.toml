@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptive-xai"
-version = "0.2.15"
-description = "Fix : gradcam plugin"
+version = "0.3.2"
+description = "Improve explanation quality"
 readme = "README.md"
 requires-python = ">=3.14"
 
@@ -24,3 +24,6 @@ xai-select = "framework.xai_selector.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["framework*"]
+
+[tool.setuptools.package-data]
+"framework.explanation_generator" = ["templates/*.json"]

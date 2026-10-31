@@ -1,0 +1,6 @@
+{
+  "output_heading": "Global feature importance:",
+  "output_factor": "  {feature}: {score:g} (relative magnitude: {percentage:.1f}%)",
+  "explanation": "Across many decisions, the model often relied on these features: {features}.",
+  "scope": "This is a general pattern, not a reason for this particular answer. A feature being important does not mean it caused the result."
+}
