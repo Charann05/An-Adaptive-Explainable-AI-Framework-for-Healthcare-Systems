@@ -1,0 +1,73 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/adaptive-xai
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Build package distributions
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Check whether this version is already on PyPI
+        id: version-check
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import tomllib
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          project = tomllib.loads(
+              Path("pyproject.toml").read_text(encoding="utf-8")
+          )["project"]
+          package_name = project["name"]
+          version = project["version"]
+          url = f"https://pypi.org/pypi/{package_name}/json"
+
+          try:
+              with urllib.request.urlopen(url, timeout=15) as response:
+                  published_versions = json.load(response)["releases"]
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              published_versions = {}
+
+          should_publish = version not in published_versions
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should_publish={str(should_publish).lower()}\n")
+          print(
+              f"{package_name} {version} "
+              + ("is not on PyPI; publishing." if should_publish else "is already on PyPI; skipping.")
+          )
+          PY
+
+      - name: Publish distributions to PyPI
+        if: steps.version-check.outputs.should_publish == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1

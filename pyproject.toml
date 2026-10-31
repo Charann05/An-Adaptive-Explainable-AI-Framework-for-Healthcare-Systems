@@ -1,21 +1,26 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
-
 
 [project]
 name = "adaptive-xai"
-version = "0.4.0"
-description = "Add notebook-to-script convertion tool"
+version = "1.0.0b1"
+description = "An adaptive explainable-AI framework for integrating XAI into machine learning projects."
 readme = "README.md"
 requires-python = ">=3.14"
-
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Charan" },
+    { name = "Dhyan KJ" },
+    { name = "Jeevitha Shetty" },
+    { name = "Poorvi J Poojary" },
+]
 dependencies = [
     "pandas",
     "numpy",
     "nbformat",
 ]
-
 
 [project.scripts]
 adaptive-xai = "adaptive_xai.run:main"
