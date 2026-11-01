@@ -1,37 +1,57 @@
 # Adaptive XAI Framework for Healthcare Systems
 
-An adaptive explainable-AI framework for helping developers integrate XAI into
-existing machine learning projects, especially healthcare and clinical modeling
-workflows.
+An adaptive explainable-AI framework for helping developers analyze existing
+machine learning projects and select explainable-AI (XAI) techniques, especially
+for healthcare and clinical modeling workflows.
 
-The framework analyzes a project, infers a model profile, selects a suitable XAI
-technique, prepares dependencies, generates an integration, and produces
-human-readable explanations for model predictions.
+The framework analyzes project files, infers a model profile, recommends a
+suitable XAI technique, and prepares its dependencies. The repository also
+contains XAI plugins and integration utilities for creating a standalone runner
+that runs the user's project with explanations. After setup, use this runner
+instead of repeating the full analysis and dependency-preparation workflow.
 
 ## Overview
 
-Adaptive XAI is designed to support the following workflow:
+Adaptive XAI currently supports this analysis and selection workflow:
 
 1. Analyze a project directory to infer the model type, architecture, input
    modality, and available feature metadata.
 2. Select a suitable XAI technique from the inferred model profile.
 3. Prepare any required dependencies for the chosen technique.
-4. Generate a model integration that can run explanations against the project.
-5. Produce readable explanation output in a format suitable for downstream use,
-   reporting, and debugging.
+4. Report the selected technique, alternatives, and rationale.
 
-The framework is intended to work with existing ML projects without requiring the
-user to rebuild a separate example model or re-run the analysis repeatedly.
+The analyzer writes a `model_report.json` profile that can be used by the
+selector without repeating the analysis. Integration and explanation components
+are available in the repository, but automatic instrumentation of the target
+project is not yet part of the end-to-end CLI workflow.
 
-## Package name and installation
+## Package & installation
 
-The Python package is published as:
+The Python package is published on [PyPI](https://pypi.org/project/adaptive-xai/)
+as:
 
 ```bash
 adaptive-xai
 ```
 
-Install it from PyPI with:
+The source code is published in the
+[GitHub repository](https://github.com/Charann05/An-Adaptive-Explainable-AI-Framework-for-Healthcare-Systems).
+
+### Installation prerequisites
+
+- Python 3.14 or newer. This is the minimum version declared by the package.
+- `pip`, to install the package from PyPI.
+- Access to the target project directory and its source/configuration files when
+  running the analyzer.
+- The target project's own ML framework and model dependencies if you intend to
+  load or run that model. These are separate from Adaptive XAI's core
+  dependencies.
+
+The package's core dependencies (`pandas`, `numpy`, and `nbformat`) are installed
+by pip. Dependencies for individual explanation techniques may also be needed;
+the framework's dependency manager can prepare technique-specific packages.
+
+Install the package in the Python environment that you intend to use:
 
 ```bash
 pip install adaptive-xai
@@ -42,18 +62,20 @@ This installs the package and registers the command-line tools defined in
 
 ## CLI commands
 
-### `adaptive-xai`
+### adaptive-xai
 
-Run the full framework workflow from the project root:
+Run the analyzer, technique selector, and dependency-preparation workflow from
+the target project root:
 
 ```bash
 adaptive-xai
 ```
 
-This starts the framework orchestration flow, including model analysis,
-selection, dependency preparation, and integration generation.
+This starts the current framework orchestration flow. It analyzes the project,
+selects a technique, and prepares dependencies. It does not automatically
+instrument the target project's prediction code.
 
-### `analyze`
+### analyze
 
 Run the analyzer directly inside a target project directory:
 
@@ -64,7 +86,7 @@ analyze
 This scans the project and generates or updates `model_report.json` in the
 current working directory.
 
-### `xai-select`
+### xai-select
 
 Use an existing analysis report without rerunning the full analyzer:
 
@@ -75,7 +97,7 @@ xai-select
 By default, it reads `model_report.json` from the current directory. It can also
 accept a path to a report file.
 
-### `convert`
+### convert
 
 Convert one or more Jupyter notebooks into runnable Python scripts:
 
@@ -106,65 +128,23 @@ adaptive_xai/
 └── ...
 ```
 
-## Module responsibilities
+### Module Responsibilities
 
-### `adaptive_xai/model_analyzer/`
+| Module | Description |
+|---|---|
+| **Model Analyzer** | Infers project and model characteristics, including ML framework, architecture, task type, input modality, feature metadata, and dataset/configuration signals. Generates `model_report.json`. |
+| **XAI Selector** | Selects a compatible XAI method using the model profile and other signals. Includes mapping rules, strategy logic, recommendation/ranking support, and CLI tooling. |
+| **Dependency Manager** | Prepares dependencies required by the selected explanation method and checks whether the required libraries are available. |
+| **XAI Integration** | Handles model loading, explanation execution, plugin generation and integration, output schema definition, and persistent integration generation for project use. |
+| **Explanation Generator** | Contains the template engine, generator entry point, and technique-specific JSON templates for explanation rendering. The generator is currently a placeholder. |
 
-Responsible for inferring project and model characteristics including:
-
-- ML framework
-- model architecture or category
-- task type
-- input modality
-- feature metadata
-- dataset and config signals
-
-It writes a `model_report.json` that summarizes the inferred profile.
-
-### `adaptive_xai/xai_selector/`
-
-Selects a compatible XAI method based on the model profile and other signals.
-It includes:
-
-- mapping rules and strategy logic
-- recommendation/ranking support
-- CLI tooling for continuing from a saved report
-
-### `adaptive_xai/dependency_manager/`
-
-Prepares dependencies required by the selected explanation method and checks
-whether required libraries are available.
-
-### `adaptive_xai/xai_integration/`
-
-Handles the execution side of XAI integration, including:
-
-- model loading
-- explanation execution
-- plugin generation and integration
-- output schema definition
-- persistent integration generation for project use
-
-### `adaptive_xai/explanation_generator/`
-
-Transforms structured XAI outputs into readable and presentation-friendly text.
-
-This module contains:
-
-- `template_engine.py` for JSON template loading and formatting
-- `generator.py` for rendering explanation output
-- `templates/*.json` for technique-specific output templates
-
-Supported techniques include:
+### Supported XAI Techniques
 
 - SHAP
 - LIME
 - Feature Importance
 - Grad-CAM
 - Tree Interpreter
-
-This is the module added to the framework for explanation formatting and result
-presentation.
 
 ## Typical workflow
 
@@ -181,33 +161,40 @@ or:
 adaptive-xai
 ```
 
-The workflow produces a `model_report.json`, identifies the best XAI approach,
-prepares dependencies, and generates the integration needed to explain model
-predictions.
+The workflow produces or updates `model_report.json`, recommends an XAI
+approach, and prepares dependencies. Running explanations from the target
+project's normal prediction flow still requires integration that the current
+CLI does not generate automatically.
 
 ## Output artifacts
 
-The framework generates and relies on the following artifacts:
+The framework's current workflow produces or uses the following artifacts:
 
 - `model_report.json` — inferred project/model profile
-- generated XAI integration files
-- selected technique metadata and explanation output
-- template-based explanation reports
+- selected technique, alternatives, and rationale reported by the selector
+- XAI integration files and explanation output when the integration utilities
+  are used separately
+- technique-specific explanation templates included in the package
 
-## Example usage
+## Limitations
 
-```bash
-cd /path/to/your/project
-analyze
-xai-select
-```
-
-Or directly:
-
-```bash
-cd /path/to/your/project
-adaptive-xai
-```
+- **Project analysis is heuristic.** The analyzer infers project and model
+  details from source code, notebooks, configuration, requirements, and dataset
+  evidence. It may miss dynamically constructed models or misclassify projects
+  when evidence is incomplete or ambiguous. Review `model_report.json` and the
+  selector's recommendation before relying on them.
+- **Technique selection is rule-based.** Recommendations come from the
+  framework's current technique knowledge and mapping rules; they are not a
+  guarantee that a technique is appropriate for every model, dataset, or
+  prediction task.
+- **Supported techniques and model types are limited.** The selector and plugin
+  implementations cover SHAP, LIME, feature importance, Grad-CAM, and Tree
+  Interpreter for selected model and input categories. Compatibility depends on
+  the model loader, adapter, technique-specific dependencies, and available
+  input/background data.
+- **Healthcare use is not clinical validation.** Explanations describe aspects
+  of model behavior; they are not medical advice, a diagnosis, evidence of
+  causation, or a substitute for clinical validation and expert review.
 
 ## License
 
