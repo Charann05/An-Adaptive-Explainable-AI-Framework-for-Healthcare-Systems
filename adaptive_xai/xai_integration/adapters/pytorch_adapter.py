@@ -112,11 +112,11 @@ class PyTorchAdapter(ModelAdapter):
         cam = GradCAM(model=model, target_layers=[target_layer])
 
         def target(model_output):
-            scores = model_output.reshape(model_output.shape[0], -1)
-            if scores.shape[1] == 1:
-                score = scores[:, 0]
+            scores = model_output.reshape(-1)
+            if scores.shape[0] == 1:
+                score = scores[0]
                 return score if prediction == 1 else -score
-            return scores[:, prediction]
+            return scores[prediction]
 
         return cam(
             input_tensor=input_data,

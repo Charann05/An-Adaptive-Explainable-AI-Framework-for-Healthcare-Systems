@@ -1,5 +1,7 @@
 import importlib
+import importlib.util
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -27,6 +29,110 @@ class GradCAMIntegrationTests(unittest.TestCase):
             importlib.reload(visualization)
 
         self.assertTrue(callable(visualization.display_gradcam))
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib"),
+        "matplotlib is required for image visualization tests",
+    )
+    def test_lime_image_visualization_saves_mask_overlay(self):
+        from adaptive_xai.xai_integration.visualization import display_lime_image
+
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "lime_explanation.png"
+            with patch("matplotlib.get_backend", return_value="agg"):
+                result = display_lime_image(
+                    np.full((1, 8, 8, 3), 0.5, dtype=np.float32),
+                    np.pad(
+                        np.ones((4, 4), dtype=np.int8),
+                        ((2, 2), (2, 2)),
+                    ),
+                    output_path,
+                    "LIME explanation",
+                )
+
+            self.assertEqual(result, output_path.resolve())
+            self.assertTrue(result.is_file())
+            self.assertGreater(result.stat().st_size, 0)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib"),
+        "matplotlib is required for image visualization tests",
+    )
+    def test_lime_image_visualization_rejects_mismatched_mask(self):
+        from adaptive_xai.xai_integration.visualization import display_lime_image
+
+        with self.assertRaisesRegex(ValueError, "matching the image dimensions"):
+            display_lime_image(
+                np.zeros((8, 8, 3)),
+                np.ones((4, 4)),
+                "unused.png",
+                "LIME explanation",
+            )
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib"),
+        "matplotlib is required for image visualization tests",
+    )
+    def test_shap_image_visualization_saves_signed_attribution_overlay(self):
+        from adaptive_xai.xai_integration.visualization import display_shap_image
+
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "shap_explanation.png"
+            with patch("matplotlib.get_backend", return_value="agg"):
+                result = display_shap_image(
+                    np.full((1, 3, 4, 4), 0.5, dtype=np.float32),
+                    np.array(
+                        [
+                            [0.1, 0.2, 0.3, 0.4],
+                            [0.2, 0.3, -0.2, -0.1],
+                            [0.4, 0.1, -0.3, -0.2],
+                            [0.3, -0.1, -0.4, -0.2],
+                        ]
+                    ),
+                    output_path,
+                    "SHAP explanation",
+                )
+
+            self.assertEqual(result, output_path.resolve())
+            self.assertTrue(result.is_file())
+            self.assertGreater(result.stat().st_size, 0)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib"),
+        "matplotlib is required for tabular visualization tests",
+    )
+    def test_tabular_attribution_visualization_saves_bar_chart(self):
+        from adaptive_xai.xai_integration.visualization import (
+            display_tabular_attributions,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "tabular_explanation.png"
+            with patch("matplotlib.get_backend", return_value="agg"):
+                result = display_tabular_attributions(
+                    [
+                        {"feature": "glucose", "importance": 0.8},
+                        {"feature": "age", "importance": -0.2},
+                    ],
+                    output_path,
+                    "Feature contributions",
+                )
+
+            self.assertEqual(result, output_path.resolve())
+            self.assertTrue(result.is_file())
+            self.assertGreater(result.stat().st_size, 0)
+
+    def test_tabular_attribution_visualization_rejects_non_finite_scores(self):
+        from adaptive_xai.xai_integration.visualization import (
+            display_tabular_attributions,
+        )
+
+        with self.assertRaisesRegex(ValueError, "must be finite"):
+            display_tabular_attributions(
+                [{"feature": "glucose", "importance": np.inf}],
+                "unused.png",
+                "Feature contributions",
+            )
 
     def test_uses_one_prediction_result_to_select_cam_target(self):
         class FakeAdapter:
@@ -96,7 +202,7 @@ class GradCAMIntegrationTests(unittest.TestCase):
                 self.target_layers = target_layers
 
             def __call__(self, *, input_tensor, targets):
-                return targets[0](np.array([[-0.7]]))
+                return targets[0](np.array([-0.7]))
 
         fake_cam_module = SimpleNamespace(GradCAM=FakeGradCAM)
         adapter = PyTorchAdapter()
@@ -114,8 +220,31 @@ class GradCAMIntegrationTests(unittest.TestCase):
                 0,
             )
 
-        self.assertEqual(positive_class_score.tolist(), [-0.7])
-        self.assertEqual(negative_class_score.tolist(), [0.7])
+        self.assertEqual(positive_class_score, -0.7)
+        self.assertEqual(negative_class_score, 0.7)
+        self.assertEqual(np.ndim(positive_class_score), 0)
+        self.assertEqual(np.ndim(negative_class_score), 0)
+
+    def test_pytorch_gradcam_target_returns_selected_multiclass_scalar(self):
+        class FakeGradCAM:
+            def __init__(self, *, model, target_layers):
+                self.model = model
+                self.target_layers = target_layers
+
+            def __call__(self, *, input_tensor, targets):
+                return targets[0](np.array([0.1, 0.2, 0.3, 0.4, 0.9]))
+
+        fake_cam_module = SimpleNamespace(GradCAM=FakeGradCAM)
+        with patch.dict("sys.modules", {"pytorch_grad_cam": fake_cam_module}):
+            selected_class_score = PyTorchAdapter().run_gradcam(
+                object(),
+                np.zeros((1, 3, 8, 8)),
+                object(),
+                4,
+            )
+
+        self.assertEqual(selected_class_score, 0.9)
+        self.assertEqual(np.ndim(selected_class_score), 0)
 
     def test_tensorflow_gradcam_targets_both_sides_of_single_logit_output(self):
         class FakeTensor(np.ndarray):

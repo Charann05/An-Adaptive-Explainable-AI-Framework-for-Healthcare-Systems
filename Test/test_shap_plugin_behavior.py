@@ -25,6 +25,50 @@ class _Adapter:
 
 
 class SHAPPluginBehaviorTests(unittest.TestCase):
+    def test_image_explanations_reduce_predicted_class_attributions_to_map(self):
+        class FakeGradientExplainer:
+            def __init__(self, model, background):
+                pass
+
+            def shap_values(self, values):
+                attributions = np.zeros((1, 2, 2, 3, 2), dtype=float)
+                attributions[0, :, :, :, 1] = np.array(
+                    [
+                        [[1, 2, 3], [4, 5, 6]],
+                        [[7, 8, 9], [10, 11, 12]],
+                    ]
+                )
+                return attributions
+
+        fake_shap = types.ModuleType("shap")
+        fake_shap.GradientExplainer = FakeGradientExplainer
+        image = np.zeros((1, 2, 2, 3), dtype=np.float32)
+
+        with patch.dict(sys.modules, {"shap": fake_shap}):
+            result = SHAPPlugin().explain(
+                object(),
+                image,
+                {
+                    "category": "CNN",
+                    "input_type": "Image",
+                    "background_data": np.zeros((2, 2, 2, 3)),
+                },
+                adapter=_Adapter(
+                    framework="tensorflow",
+                    prediction=np.array([[0.1, 0.9]]),
+                ),
+            )
+
+        self.assertEqual(result.feature_ranking, [])
+        self.assertEqual(
+            result.raw_output,
+            [[6.0, 15.0], [24.0, 33.0]],
+        )
+        self.assertEqual(
+            result.metadata["raw_output_type"],
+            "spatial_image_attributions",
+        )
+
     def test_selects_output_using_predicted_class_label(self):
         class FakeTreeExplainer:
             def __init__(self, model):

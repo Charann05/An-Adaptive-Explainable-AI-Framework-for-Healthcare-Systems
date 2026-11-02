@@ -87,6 +87,58 @@ def _select_shap_values(raw_values, prediction, model, feature_count, is_regress
     return selected
 
 
+def _select_image_shap_values(
+    raw_values,
+    prediction,
+    model,
+    image_shape,
+    is_regression,
+):
+    import numpy as np
+
+    if hasattr(raw_values, "values"):
+        raw_values = raw_values.values
+
+    if isinstance(raw_values, list):
+        output_count = len(raw_values)
+        if is_regression or output_count == 1:
+            selected = raw_values[0]
+        else:
+            output_index = _class_output_index(model, prediction, output_count)
+            selected = raw_values[output_index]
+        values = np.asarray(selected)
+        if values.ndim == len(image_shape) + 1 and values.shape[0] == 1:
+            values = values[0]
+    else:
+        values = np.asarray(raw_values)
+        if values.ndim == len(image_shape) + 2 and values.shape[0] == 1:
+            if values.shape[1:-1] == image_shape:
+                output_count = values.shape[-1]
+                output_index = (
+                    0
+                    if is_regression
+                    else _class_output_index(model, prediction, output_count)
+                )
+                values = values[0, ..., output_index]
+            elif values.shape[2:] == image_shape:
+                output_count = values.shape[1]
+                output_index = (
+                    0
+                    if is_regression
+                    else _class_output_index(model, prediction, output_count)
+                )
+                values = values[0, output_index]
+        elif values.ndim == len(image_shape) + 1 and values.shape[0] == 1:
+            values = values[0]
+
+    if values.shape != image_shape:
+        raise ValueError(
+            "SHAP image attributions do not match the model input shape: "
+            f"received {values.shape}, expected {image_shape}."
+        )
+    return values
+
+
 @register_plugin("SHAP")
 class SHAPPlugin(XAIPlugin):
 
@@ -109,7 +161,11 @@ class SHAPPlugin(XAIPlugin):
             "category"
         ) in {"Linear", "Regression"}
         feature_names = model_info.get("feature_names")
-        input_array = np.asarray(input_data)
+        input_array = np.asarray(
+            input_data.detach().cpu().numpy()
+            if hasattr(input_data, "detach")
+            else input_data
+        )
 
         if category in self.TREE_CATEGORIES:
             explainer = shap.TreeExplainer(model)
@@ -165,6 +221,47 @@ class SHAPPlugin(XAIPlugin):
             "Regression" if is_regression else "Classification",
             class_scores=adapter.framework in {"pytorch", "tensorflow"},
         )
+
+        is_image = (
+            str(model_info.get("input_type", "")).strip().lower() == "image"
+        )
+        if is_image:
+            if input_array.ndim != 4:
+                raise ValueError(
+                    "SHAP image explanations require a single batched image "
+                    "with four dimensions."
+                )
+            image_values = _select_image_shap_values(
+                raw_values,
+                prediction,
+                model,
+                input_array.shape[1:],
+                is_regression,
+            )
+            channel_order = model_info.get("channel_order")
+            if channel_order is None:
+                channel_order = (
+                    "channels_first"
+                    if adapter.framework == "pytorch"
+                    else "channels_last"
+                )
+            channel_axis = 0 if channel_order == "channels_first" else -1
+            spatial_values = np.sum(image_values, axis=channel_axis)
+            if spatial_values.ndim != 2:
+                raise ValueError(
+                    "SHAP image attributions could not be reduced to a "
+                    "two-dimensional spatial map."
+                )
+            return ExplanationResult(
+                technique_used=self.name,
+                prediction=prediction,
+                raw_output=spatial_values.tolist(),
+                metadata={
+                    "framework": adapter.framework,
+                    "shap_variant": explainer.__class__.__name__,
+                    "raw_output_type": "spatial_image_attributions",
+                },
+            )
 
         class_values = _select_shap_values(
             raw_values,

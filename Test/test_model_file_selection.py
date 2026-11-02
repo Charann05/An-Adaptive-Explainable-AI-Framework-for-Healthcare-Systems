@@ -63,12 +63,45 @@ class ModelFileSelectionTests(unittest.TestCase):
                     for target in node.targets
                 )
             )
+            lime_visualization_path_assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "LIME_VISUALIZATION_PATH"
+                for target in node.targets
+            )
+            )
+            shap_visualization_path_assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "SHAP_VISUALIZATION_PATH"
+                for target in node.targets
+            )
+            )
+            tabular_visualization_path_assignment = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name)
+                and target.id == "TABULAR_VISUALIZATION_PATH"
+                for target in node.targets
+            )
+            )
             exec(
-                compile(
-                    ast.Module(
-                        body=[
-                            visualization_path_assignment,
-                            startup_cleanup,
+            compile(
+                ast.Module(
+                    body=[
+                        visualization_path_assignment,
+                        lime_visualization_path_assignment,
+                        shap_visualization_path_assignment,
+                        tabular_visualization_path_assignment,
+                        startup_cleanup,
                         ],
                         type_ignores=[],
                     ),
@@ -164,7 +197,43 @@ class ModelFileSelectionTests(unittest.TestCase):
                 generated_source,
             )
             self.assertIn(
+                'LIME_VISUALIZATION_PATH = Path(__file__).with_name("lime_explanation.png")',
+                generated_source,
+            )
+            self.assertIn(
+                'SHAP_VISUALIZATION_PATH = Path(__file__).with_name("shap_explanation.png")',
+                generated_source,
+            )
+            self.assertIn(
+                'TABULAR_VISUALIZATION_PATH = Path(__file__).with_name("tabular_explanation.png")',
+                generated_source,
+            )
+            self.assertIn(
                 "VISUALIZATION_PATH.unlink(missing_ok=True)",
+                generated_source,
+            )
+            self.assertIn(
+                "LIME_VISUALIZATION_PATH.unlink(missing_ok=True)",
+                generated_source,
+            )
+            self.assertIn(
+                "SHAP_VISUALIZATION_PATH.unlink(missing_ok=True)",
+                generated_source,
+            )
+            self.assertIn(
+                "TABULAR_VISUALIZATION_PATH.unlink(missing_ok=True)",
+                generated_source,
+            )
+            self.assertIn(
+                "display_lime_image(",
+                generated_source,
+            )
+            self.assertIn(
+                "display_shap_image(",
+                generated_source,
+            )
+            self.assertIn(
+                "display_tabular_attributions(",
                 generated_source,
             )
             self.assertLess(

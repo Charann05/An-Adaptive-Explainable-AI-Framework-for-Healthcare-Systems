@@ -126,6 +126,49 @@ class ExplanationFormatterTests(unittest.TestCase):
         self.assertIn("A highlight does not mean that area caused", explanation)
         self.assertIn("score of 92.4%", explanation)
 
+    def test_lime_image_result_shows_saved_visualization_path(self):
+        result = {
+            "prediction": 4,
+            "technique_used": "LIME",
+            "raw_output": [[1, 0], [0, 1]],
+        }
+
+        output = format_xai_output(
+            result,
+            "Image",
+            "/tmp/lime_explanation.png",
+        )
+
+        self.assertIn("| LIME visualization | /tmp/lime_explanation.png", output)
+
+    def test_shap_image_result_shows_saved_visualization_path(self):
+        output = format_xai_output(
+            {
+                "prediction": 4,
+                "technique_used": "SHAP",
+                "raw_output": [[0.1, -0.2], [0.3, -0.4]],
+            },
+            "Image",
+            "/tmp/shap_explanation.png",
+        )
+
+        self.assertIn("| SHAP visualization | /tmp/shap_explanation.png", output)
+
+    def test_tabular_result_shows_saved_visualization_path(self):
+        output = format_xai_output(
+            {
+                "prediction": 1,
+                "technique_used": "SHAP",
+                "feature_ranking": [
+                    {"feature": "glucose", "importance": 0.8},
+                ],
+            },
+            "Tabular",
+            "/tmp/tabular_explanation.png",
+        )
+
+        self.assertIn("| Visualization | /tmp/tabular_explanation.png", output)
+
     def test_confidence_is_reported_as_model_score_not_clinical_certainty(self):
         formatted = format_explanation(
             {

@@ -266,7 +266,12 @@ from adaptive_xai.xai_integration.exceptions import (
     ExplanationExecutionError,
     ModelLoadError,
 )
-from adaptive_xai.xai_integration.visualization import display_gradcam
+from adaptive_xai.xai_integration.visualization import (
+    display_gradcam,
+    display_lime_image,
+    display_shap_image,
+    display_tabular_attributions,
+)
 from adaptive_xai.explanation_generator.generator import (
     format_explanation,
     format_xai_output,
@@ -276,8 +281,14 @@ from adaptive_xai.cli_display import print_explanation_error, print_model_load_e
 
 INTEGRATION = {configuration}
 VISUALIZATION_PATH = Path(__file__).with_name("gradcam_explanation.png")
+LIME_VISUALIZATION_PATH = Path(__file__).with_name("lime_explanation.png")
+SHAP_VISUALIZATION_PATH = Path(__file__).with_name("shap_explanation.png")
+TABULAR_VISUALIZATION_PATH = Path(__file__).with_name("tabular_explanation.png")
 if __name__ == "__main__":
     VISUALIZATION_PATH.unlink(missing_ok=True)
+    LIME_VISUALIZATION_PATH.unlink(missing_ok=True)
+    SHAP_VISUALIZATION_PATH.unlink(missing_ok=True)
+    TABULAR_VISUALIZATION_PATH.unlink(missing_ok=True)
 # Change this path to use a different model file.
 MODEL_PATH = Path(INTEGRATION["model_path"])
 # Replace this with representative tabular rows if automatic discovery missed
@@ -454,6 +465,50 @@ if __name__ == "__main__":
         )
         output["visualization"] = {{
             "type": "Grad-CAM overlay",
+            "path": str(visualization_path),
+        }}
+    elif (
+        output["technique_used"] == "LIME"
+        and str(INTEGRATION["model_info"].get("input_type", "")).lower()
+        == "image"
+    ):
+        visualization_path = display_lime_image(
+            input_data,
+            output["raw_output"],
+            LIME_VISUALIZATION_PATH,
+            f"LIME image explanation for prediction {{output['prediction']}}",
+        )
+        output["visualization"] = {{
+            "type": "LIME image overlay",
+            "path": str(visualization_path),
+        }}
+    elif (
+        output["technique_used"] == "SHAP"
+        and str(INTEGRATION["model_info"].get("input_type", "")).lower()
+        == "image"
+    ):
+        visualization_path = display_shap_image(
+            input_data,
+            output["raw_output"],
+            SHAP_VISUALIZATION_PATH,
+            f"SHAP image explanation for prediction {{output['prediction']}}",
+        )
+        output["visualization"] = {{
+            "type": "SHAP image attribution overlay",
+            "path": str(visualization_path),
+        }}
+    elif (
+        str(INTEGRATION["model_info"].get("input_type", "")).lower()
+        in {"tabular", "unknown", ""}
+        and output["feature_ranking"]
+    ):
+        visualization_path = display_tabular_attributions(
+            output["feature_ranking"],
+            TABULAR_VISUALIZATION_PATH,
+            f"Feature contributions for prediction {{output['prediction']}}",
+        )
+        output["visualization"] = {{
+            "type": "Tabular feature contributions",
             "path": str(visualization_path),
         }}
     input_type = INTEGRATION["model_info"].get("input_type", "")

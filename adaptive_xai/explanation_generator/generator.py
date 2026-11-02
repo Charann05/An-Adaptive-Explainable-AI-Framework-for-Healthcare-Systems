@@ -100,6 +100,10 @@ def format_xai_output(
                     ).removeprefix("Grad-CAM visualization: "),
                 )
             )
+        elif visualization_path and technique.strip().upper() == "LIME":
+            rows.append(("LIME visualization", visualization_path))
+        elif visualization_path and technique.strip().upper() == "SHAP":
+            rows.append(("SHAP visualization", visualization_path))
         elif result.get("raw_output") is not None:
             rows.append(("Attributions", common["image_attribution_available"]))
         else:
@@ -109,6 +113,8 @@ def format_xai_output(
     ranking = result.get("feature_ranking") or []
     if not ranking:
         rows.append(("Attributions", common["no_attributions"]))
+        if visualization_path:
+            rows.append(("Visualization", visualization_path))
         return _format_result_table(rows, common["xai_output_heading"])
 
     scores = [float(item["importance"]) for item in ranking]
@@ -139,6 +145,8 @@ def format_xai_output(
         ).strip().removeprefix("- ")
         rows.append(("Feature", factor))
     rows.append(("Note", common["relative_attribution_note"]))
+    if visualization_path:
+        rows.append(("Visualization", visualization_path))
     return _format_result_table(rows, common["xai_output_heading"])
 
 
