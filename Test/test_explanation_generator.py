@@ -15,7 +15,7 @@ from adaptive_xai.explanation_generator.template_engine import TemplateEngine
 
 
 class ExplanationFormatterTests(unittest.TestCase):
-    def test_xai_values_and_human_explanation_are_separate(self):
+    def test_result_table_and_human_explanation_are_separate(self):
         result = {
             "prediction": "positive",
             "technique_used": "SHAP",
@@ -27,9 +27,13 @@ class ExplanationFormatterTests(unittest.TestCase):
         xai_output = format_xai_output(result, "Tabular")
         explanation = format_explanation(result, "Tabular")
 
-        self.assertIn("supporting: +3", xai_output)
-        self.assertIn("relative magnitude: 75.0%", xai_output)
-        self.assertIn("opposing: -1", xai_output)
+        self.assertTrue(xai_output.startswith("\nRESULT\n+"))
+        self.assertIn("| Parameter    | Value", xai_output)
+        self.assertIn("| Technique    | SHAP", xai_output)
+        self.assertIn("| Prediction   | positive", xai_output)
+        self.assertIn("| Feature      | supporting: +3 | 75.0% relative", xai_output)
+        self.assertIn("| Feature      | opposing: -1 | 25.0% relative", xai_output)
+        self.assertNotIn("XAI RESULTS", xai_output)
         self.assertNotIn("supported the predicted outcome", xai_output)
         self.assertIn("In simple terms", explanation)
         self.assertIn(
@@ -93,8 +97,8 @@ class ExplanationFormatterTests(unittest.TestCase):
         xai_output = format_xai_output(result, "Tabular")
         explanation = format_explanation(result, "Tabular")
 
-        self.assertIn("relative magnitude: 33.3%", xai_output)
-        self.assertIn("relative magnitude: 66.7%", xai_output)
+        self.assertIn("33.3% relative", xai_output)
+        self.assertIn("66.7% relative", xai_output)
         self.assertNotIn("%", explanation)
 
     def test_image_visualization_is_separate_from_plain_language_explanation(self):
@@ -116,7 +120,7 @@ class ExplanationFormatterTests(unittest.TestCase):
             "/tmp/gradcam.png",
         )
 
-        self.assertIn("Grad-CAM visualization: /tmp/gradcam.png", xai_output)
+        self.assertIn("| Grad-CAM visualization | /tmp/gradcam.png", xai_output)
         self.assertNotIn("Grad-CAM visualization", explanation)
         self.assertIn("In simple terms", explanation)
         self.assertIn("A highlight does not mean that area caused", explanation)

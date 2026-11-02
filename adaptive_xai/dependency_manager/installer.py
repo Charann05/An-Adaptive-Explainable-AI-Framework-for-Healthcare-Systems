@@ -3,6 +3,8 @@ import sys
 import threading
 import time
 
+INSTALL_TIMEOUT_SECONDS = 120
+
 
 def show_spinner(stop_event, message):
     symbols = ["|", "/", "-", "\\"]
@@ -17,35 +19,58 @@ def show_spinner(stop_event, message):
     print("\r" + " " * (len(message) + 3), end="\r")
 
 
-def install_package(package_name):
-    # print(f"\nInstalling {package_name}...")
-
+def install_package(package_name, timeout=INSTALL_TIMEOUT_SECONDS):
     stop_event = threading.Event()
-    spinner = threading.Thread(target=show_spinner,args=(stop_event, f"Installing {package_name}"))
-
+    spinner = threading.Thread(
+        target=show_spinner,
+        args=(stop_event, f"Installing {package_name}"),
+    )
     spinner.start()
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            package_name
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True
-    )
+    result = None
+    failure = None
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                package_name,
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as error:
+        failure = (
+            f"Installation timed out after {timeout} seconds. "
+            "Check your network connection and try again."
+        )
+        if error.stderr:
+            stderr = error.stderr
+            if isinstance(stderr, bytes):
+                stderr = stderr.decode(errors="replace")
+            failure = f"{failure}\n{stderr.strip()}"
+    except OSError as error:
+        failure = f"Could not start pip: {error}"
+    finally:
+        stop_event.set()
+        spinner.join()
 
-    stop_event.set()
-    spinner.join()
-
-    if result.returncode == 0:
+    if result is not None and result.returncode == 0:
         print(f"✓ {package_name} installed successfully.")
         return True
 
     print(f"✗ Failed to install {package_name}.")
-    print(result.stderr)
+    if failure:
+        print(failure)
+    elif result is not None and result.stderr:
+        print(
+            "pip installation failed. Check your network connection, "
+            "package name, and pip output."
+        )
+        print(result.stderr.strip())
 
     return False

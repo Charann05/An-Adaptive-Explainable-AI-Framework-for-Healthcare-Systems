@@ -327,7 +327,16 @@ def run_project(project_root, final_evidence=None, report_path=None):
             print_error("No suitable XAI technique was selected.")
             return
 
-        prepare_dependencies(selected_xai)
+        dependency_result = prepare_dependencies(selected_xai)
+        failed_dependencies = dependency_result["failed"]
+        if failed_dependencies:
+            packages = ", ".join(failed_dependencies)
+            print_error(
+                f"Could not prepare dependencies for {selected_xai}: "
+                f"{packages}. Check your network connection and install "
+                "the missing packages, then rerun the setup."
+            )
+            return
 
         model_files = find_model_files(
             project_root,

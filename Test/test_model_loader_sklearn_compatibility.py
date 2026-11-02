@@ -73,6 +73,42 @@ class SklearnModelLoaderCompatibilityTests(unittest.TestCase):
         self.assertEqual(raised.exception.installed_version, "1.9.0")
         self.assertIsInstance(raised.exception.__cause__, AttributeError)
 
+    def test_deduplicates_repeated_version_warnings_during_load(self):
+        import joblib
+        from sklearn.exceptions import InconsistentVersionWarning
+
+        with tempfile.TemporaryDirectory() as directory:
+            model_path = Path(directory) / "model.pkl"
+            model_path.touch()
+
+            def load_with_repeated_warnings(_path):
+                for _ in range(3):
+                    warnings.warn(
+                        InconsistentVersionWarning(
+                            estimator_name="DecisionTreeClassifier",
+                            current_sklearn_version="1.9.0",
+                            original_sklearn_version="1.6.1",
+                        )
+                    )
+                return object()
+
+            with (
+                patch.object(joblib, "load", side_effect=load_with_repeated_warnings),
+                patch(
+                    "adaptive_xai.xai_integration.model_loader."
+                    "prepare_model_dependencies",
+                    return_value={"failed": []},
+                ),
+                patch(
+                    "adaptive_xai.xai_integration.model_loader.warnings."
+                    "showwarning"
+                ) as showwarning,
+            ):
+                loaded_model = ModelLoader().load(model_path, "scikit-learn")
+
+        self.assertIsNotNone(loaded_model)
+        self.assertEqual(showwarning.call_count, 1)
+
     def test_displays_version_pin_and_safe_recovery_steps(self):
         error = ModelCompatibilityError(
             "Version mismatch",

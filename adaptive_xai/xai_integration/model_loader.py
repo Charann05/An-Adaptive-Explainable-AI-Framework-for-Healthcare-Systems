@@ -269,7 +269,17 @@ class ModelLoader:
                     installed_version=installed_version,
                 ) from exc
 
+        shown_version_pairs = set()
         for item in captured_warnings:
+            if isinstance(item.message, InconsistentVersionWarning):
+                version_pair = (
+                    item.message.original_sklearn_version,
+                    item.message.current_sklearn_version,
+                )
+                if version_pair in shown_version_pairs:
+                    continue
+                shown_version_pairs.add(version_pair)
+
             warnings.showwarning(
                 item.message,
                 item.category,

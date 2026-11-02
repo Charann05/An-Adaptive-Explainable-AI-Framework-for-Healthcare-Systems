@@ -4,7 +4,7 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 if __package__:
     from . import _bootstrap
@@ -55,7 +55,11 @@ class ExistingIntegrationStartupTests(unittest.TestCase):
                 patch.object(run, "analyze_model", return_value=evidence),
                 patch.object(run, "is_valid_analysis", return_value=True),
                 patch.object(run, "select_xai", return_value=selector_result),
-                patch.object(run, "prepare_dependencies"),
+                patch.object(
+                    run,
+                    "prepare_dependencies",
+                    return_value={"installed": [], "failed": []},
+                ),
                 patch.object(run, "find_model_files", return_value=[model_path]),
                 patch.object(run, "build_model_info", return_value={}),
                 patch("builtins.input", side_effect=["2", "age", "glucose"]),
@@ -165,7 +169,11 @@ class ExistingIntegrationStartupTests(unittest.TestCase):
                     "select_xai",
                     return_value={"selected": "SHAP", "alternatives": []},
                 ),
-                patch.object(run, "prepare_dependencies"),
+                patch.object(
+                    run,
+                    "prepare_dependencies",
+                    return_value={"installed": [], "failed": []},
+                ),
                 patch.object(run, "find_model_files", return_value=[model_path]),
                 patch.object(run, "build_model_info", return_value={}),
                 redirect_stdout(output),
@@ -174,6 +182,56 @@ class ExistingIntegrationStartupTests(unittest.TestCase):
 
             self.assertIn("preprocess_input()", output.getvalue())
             self.assertIn("python adap_xai.py", output.getvalue())
+
+    def test_dependency_install_failure_stops_setup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            integration = type(
+                "Integration",
+                (),
+                {
+                    "entrypoint": project / "adap_xai.py",
+                    "exists": lambda self: False,
+                    "create": Mock(),
+                },
+            )()
+            evidence = {
+                "framework": {"value": "scikit-learn"},
+                "architecture": {"value": "DecisionTree"},
+                "task": {"value": "Classification"},
+                "input_type": {"value": "Tabular"},
+                "feature_names": {"value": ["feature"]},
+            }
+            output = StringIO()
+
+            with (
+                patch.object(run, "get_model_folder", return_value=project),
+                patch.object(run, "PersistentIntegration", return_value=integration),
+                patch.object(run, "detect_manual_xai_usage", return_value={}),
+                patch.object(run, "analyze_model", return_value=evidence),
+                patch.object(run, "is_valid_analysis", return_value=True),
+                patch.object(
+                    run,
+                    "select_xai",
+                    return_value={"selected": "SHAP", "alternatives": []},
+                ),
+                patch.object(
+                    run,
+                    "prepare_dependencies",
+                    return_value={
+                        "installed": [],
+                        "failed": ["shap"],
+                    },
+                ),
+                patch.object(run, "find_model_files") as find_model_files,
+                redirect_stdout(output),
+            ):
+                run.main()
+
+            find_model_files.assert_not_called()
+            integration.create.assert_not_called()
+            self.assertIn("Could not prepare dependencies for SHAP: shap", output.getvalue())
+            self.assertIn("Check your network connection", output.getvalue())
 
     def test_declining_replacement_preserves_existing_integration(self):
         with tempfile.TemporaryDirectory() as directory:

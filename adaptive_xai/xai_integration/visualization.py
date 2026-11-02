@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import matplotlib
 
 from .prediction_utils import to_numpy
 

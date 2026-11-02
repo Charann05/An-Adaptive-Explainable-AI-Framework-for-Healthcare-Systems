@@ -1,3 +1,5 @@
+import importlib
+import sys
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -18,6 +20,14 @@ MODEL_PATH = Path(__file__).with_name("test_cnn_model.pt")
 
 
 class GradCAMIntegrationTests(unittest.TestCase):
+    def test_visualization_module_imports_without_matplotlib(self):
+        from adaptive_xai.xai_integration import visualization
+
+        with patch.dict(sys.modules, {"matplotlib": None}):
+            importlib.reload(visualization)
+
+        self.assertTrue(callable(visualization.display_gradcam))
+
     def test_uses_one_prediction_result_to_select_cam_target(self):
         class FakeAdapter:
             framework = "test"
