@@ -491,7 +491,7 @@ if __name__ == "__main__":
 
 def find_model_files(project_root: str | Path, framework: str) -> list[Path]:
     root = Path(project_root).expanduser().resolve()
-    normalized = adaptive_xai.strip().lower()
+    normalized = framework.strip().lower()
     extensions = {
         "pytorch": {".pt", ".pth", ".bin"},
         "tensorflow": {".keras", ".h5", ".hdf5"},

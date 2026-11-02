@@ -219,6 +219,18 @@ class XGBoostPickleDependencyTests(unittest.TestCase):
             ],
         )
 
+    def test_model_dependency_setup_normalizes_framework(self):
+        with patch(
+            "adaptive_xai.dependency_manager.manager._prepare_packages",
+            return_value={"installed": [], "failed": []},
+        ) as prepare_packages:
+            prepare_model_dependencies("  XGBoost  ")
+
+        self.assertEqual(
+            prepare_packages.call_args.args[0],
+            [{"pip": "xgboost", "import": "xgboost"}],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

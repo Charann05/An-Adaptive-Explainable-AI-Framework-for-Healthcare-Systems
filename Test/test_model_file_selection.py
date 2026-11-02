@@ -128,6 +128,17 @@ class ModelFileSelectionTests(unittest.TestCase):
                 model_files[0],
             )
 
+    def test_normalizes_framework_when_finding_model_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            model_path = project / "model.pkl"
+            model_path.touch()
+
+            self.assertEqual(
+                find_model_files(project, "  Scikit-Learn  "),
+                [model_path],
+            )
+
     def test_generated_entrypoint_exposes_editable_model_path(self):
         with tempfile.TemporaryDirectory() as directory:
             integration = PersistentIntegration(directory)

@@ -30,6 +30,12 @@ from adaptive_xai.cli_display import (
     "scikit-learn and joblib are required",
 )
 class SklearnModelLoaderCompatibilityTests(unittest.TestCase):
+    def test_normalizes_framework_name(self):
+        self.assertEqual(
+            ModelLoader._normalize_framework("  Scikit-Learn  "),
+            "scikit-learn",
+        )
+
     def test_includes_saved_and_installed_sklearn_versions_on_failure(self):
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
