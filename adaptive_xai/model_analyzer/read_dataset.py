@@ -24,6 +24,8 @@ TARGET_COLUMN_NAMES = {
 
 def scan_dataset(MODEL_FOLDER, evidences, file_info):
     cli_display.print_status("Scanning dataset files")
+    datasets = []
+
     for file in file_info:
         extension = file["extension"].lower()
         if extension not in DATASET_EXTENSIONS:
@@ -35,7 +37,7 @@ def scan_dataset(MODEL_FOLDER, evidences, file_info):
         has_header = file.get("has_header", has_header_heuristic(file_path, extension))
         if not has_header:
             print("Dataset has no header. Skipping column evidence.")
-            return
+            continue
 
         dataframe = read_dataset(file_path, extension, has_header=True)
 
@@ -50,33 +52,68 @@ def scan_dataset(MODEL_FOLDER, evidences, file_info):
 
         target_column = detect_target_column(columns)
         feature_names = [column for column in columns if column != target_column]
+        datasets.append({
+            "columns": columns,
+            "target_column": target_column,
+            "feature_names": feature_names,
+            "row_count": len(dataframe),
+        })
 
-        evidences["dataset_columns"].append({
-            "value": columns,
+    if not datasets:
+        return
+
+    feature_datasets = [item for item in datasets if item["feature_names"]]
+    candidates = feature_datasets or datasets
+    dataset = max(
+        candidates,
+        key=lambda item: len(item["feature_names"]),
+    )
+    columns = dataset["columns"]
+    target_column = dataset["target_column"]
+    feature_names = dataset["feature_names"]
+
+    # Some projects keep labels in a separate one-column CSV alongside X.
+    # Use that label schema only when its row count matches the selected data.
+    if target_column is None:
+        matching_target = next(
+            (
+                item["target_column"]
+                for item in datasets
+                if len(item["columns"]) == 1
+                and item["target_column"] is not None
+                and item["row_count"] == dataset["row_count"]
+            ),
+            None,
+        )
+        if matching_target is not None:
+            target_column = matching_target
+            columns = [*columns, target_column]
+
+    evidences["dataset_columns"].append({
+        "value": columns,
+        "source": "dataset",
+        "weight": constants.SOURCE_WEIGHTS["dataset"]
+    })
+
+    if target_column:
+        evidences["target_column"].append({
+            "value": target_column,
             "source": "dataset",
             "weight": constants.SOURCE_WEIGHTS["dataset"]
         })
 
-        if target_column:
-            evidences["target_column"].append({
-                "value": target_column,
-                "source": "dataset",
-                "weight": constants.SOURCE_WEIGHTS["dataset"]
-            })
+    if feature_names:
+        evidences["feature_names"].append({
+            "value": feature_names,
+            "source": "dataset",
+            "weight": constants.SOURCE_WEIGHTS["dataset"]
+        })
+        evidences["num_inputs"].append({
+            "value": len(feature_names),
+            "source": "dataset",
+            "weight": constants.SOURCE_WEIGHTS["dataset"]
+        })
 
-        if feature_names:
-            evidences["feature_names"].append({
-                "value": feature_names,
-                "source": "dataset",
-                "weight": constants.SOURCE_WEIGHTS["dataset"]
-            })
-            evidences["num_inputs"].append({
-                "value": len(feature_names),
-                "source": "dataset",
-                "weight": constants.SOURCE_WEIGHTS["dataset"]
-            })
-
-        return
 
 def has_header_heuristic(file_path, extension):
     try:

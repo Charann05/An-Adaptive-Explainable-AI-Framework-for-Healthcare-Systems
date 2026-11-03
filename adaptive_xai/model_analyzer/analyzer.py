@@ -39,18 +39,7 @@ def analyze_model():
     ]
 
     if valid_items:
-        col1_w = max([len(label) for label, _ in valid_items] + [len("Parameter")])
-        col2_w = max([len(val) for _, val in valid_items] + [len("Value")])
-        sep = f"+{'-' * (col1_w + 2)}+{'-' * (col2_w + 2)}+"
-
-        print("\n" + sep)
-        print(f"| {'Parameter':<{col1_w}} | {'Value':<{col2_w}} |")
-        print(sep)
-
-        for label, value in valid_items:
-            print(f"| {label:<{col1_w}} | {value:<{col2_w}} |")
-
-        print(sep)
+        print("\n" + cli_display.format_table(valid_items))
 
     generate_report(final_evidence)
 

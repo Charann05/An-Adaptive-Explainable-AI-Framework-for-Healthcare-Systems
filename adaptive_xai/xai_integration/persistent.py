@@ -165,11 +165,16 @@ class PersistentIntegration:
                 if expected_features and len(selected_columns) != expected_features:
                     continue
 
-            sample = dataframe.loc[:, selected_columns].sample(
-                n=min(100, len(dataframe)),
+            complete_rows = dataframe.loc[:, selected_columns].dropna(
+                subset=selected_columns
+            )
+            if complete_rows.empty:
+                continue
+
+            sample = complete_rows.sample(
+                n=min(100, len(complete_rows)),
                 random_state=0,
             )
-            sample = sample.astype(object).where(pd.notna(sample), None)
             info["background_data"] = sample.values.tolist()
             return info
 
@@ -390,9 +395,14 @@ def _prompt_input():
     if feature_names:
         values = []
         for name in feature_names:
-            value = input(f"Enter {{name}}: ").strip()
-            if not value:
-                raise ValueError(f"Value for {{name}} cannot be empty.")
+            while True:
+                value = input(f"Enter {{name}}: ").strip()
+                if value:
+                    break
+                print(f"Value for {{name}} cannot be empty. Please try again.")
+            if value.casefold() in {{"true", "false"}}:
+                values.append(value.casefold() == "true")
+                continue
             try:
                 values.append(json.loads(value))
             except json.JSONDecodeError:

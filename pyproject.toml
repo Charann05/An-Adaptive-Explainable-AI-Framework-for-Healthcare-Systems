@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptive-xai"
-version = "1.0.0b4"
+version = "1.0.0b5"
 description = "An adaptive explainable-AI framework for integrating XAI into machine learning projects."
 readme = "README.md"
 requires-python = ">=3.14"

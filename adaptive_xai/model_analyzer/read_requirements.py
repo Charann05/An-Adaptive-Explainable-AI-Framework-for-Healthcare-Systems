@@ -1,3 +1,4 @@
+import codecs
 import os
 from . import constants
 from pathlib import Path
@@ -28,16 +29,23 @@ def scan_requirements(MODEL_FOLDER, evidences, file_info):
             cli_display.print_status("Scanning requirements.txt")
             found = True
 
-            with open(requirements, "r", encoding="utf-8") as lines:
-                for line in lines:
-                    package = clean_package(line)
-                    if package in constants.FRAMEWORK_MAP:
-                        value = constants.FRAMEWORK_MAP[package]
-                        evidences["framework"].append({
-                                                        "value" : value,
-                                                        "source" : "requirements",
-                                                        "weight" : constants.SOURCE_WEIGHTS["requirements"]
-                                                    })
+            contents = requirements.read_bytes()
+            if contents.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+                encoding = "utf-32"
+            elif contents.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+                encoding = "utf-16"
+            else:
+                encoding = "utf-8-sig"
+
+            for line in contents.decode(encoding).splitlines():
+                package = clean_package(line)
+                if package in constants.FRAMEWORK_MAP:
+                    value = constants.FRAMEWORK_MAP[package]
+                    evidences["framework"].append({
+                                                    "value" : value,
+                                                    "source" : "requirements",
+                                                    "weight" : constants.SOURCE_WEIGHTS["requirements"]
+                                                })
             break
 
     if not found:

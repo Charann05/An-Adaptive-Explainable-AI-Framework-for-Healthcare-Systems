@@ -1,3 +1,44 @@
+from textwrap import wrap
+
+
+def format_table(rows, *, max_value_width=52, section_breaks=()):
+    rows = [(str(label), str(value)) for label, value in rows]
+    label_width = max(
+        [len("Parameter")] + [len(label) for label, _ in rows]
+    )
+    value_width = min(
+        max([len("Value")] + [len(value) for _, value in rows]),
+        max_value_width,
+    )
+    separator = f"+{'-' * (label_width + 2)}+{'-' * (value_width + 2)}+"
+    lines = [
+        separator,
+        f"| {'Parameter':<{label_width}} | {'Value':<{value_width}} |",
+        separator,
+    ]
+    section_breaks = set(section_breaks)
+
+    for row_index, (label, value) in enumerate(rows, start=1):
+        wrapped_value = wrap(
+            value,
+            width=value_width,
+            break_long_words=True,
+            break_on_hyphens=False,
+        ) or [""]
+        for line_index, line in enumerate(wrapped_value):
+            row_label = label if line_index == 0 else ""
+            lines.append(
+                f"| {row_label:<{label_width}} | {line:<{value_width}} |"
+            )
+        if row_index in section_breaks:
+            lines.append(separator)
+
+    if len(rows) not in section_breaks:
+        lines.append(separator)
+
+    return "\n".join(lines)
+
+
 def print_banner():
     print(r"""
     ────────────────────────────────────────────────────────────────────────────────────────────────────

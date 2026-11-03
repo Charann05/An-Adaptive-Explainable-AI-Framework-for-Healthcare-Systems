@@ -1,7 +1,9 @@
 import ast
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
@@ -274,6 +276,104 @@ class ModelFileSelectionTests(unittest.TestCase):
                 generated_source,
             )
 
+    def test_tabular_prompt_parses_python_style_boolean_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            integration = PersistentIntegration(project)
+            integration._write_entrypoint(
+                IntegrationManifest(
+                    model_path=str(project / "model.pkl"),
+                    model_info={
+                        "input_type": "Tabular",
+                        "feature_names": ["sex_0", "sex_1", "thal_7.0"],
+                    },
+                    selector_result={"selected": "SHAP"},
+                    technique="SHAP",
+                )
+            )
+            tree = ast.parse(
+                integration.entrypoint.read_text(encoding="utf-8")
+            )
+            prompt_function = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name == "_prompt_input"
+            )
+            namespace = {
+                "INTEGRATION": {
+                    "model_info": {
+                        "input_type": "Tabular",
+                        "feature_names": ["sex_0", "sex_1", "thal_7.0"],
+                    },
+                },
+                "json": json,
+            }
+            exec(
+                compile(
+                    ast.Module(body=[prompt_function], type_ignores=[]),
+                    str(integration.entrypoint),
+                    "exec",
+                ),
+                namespace,
+            )
+
+        with patch("builtins.input", side_effect=["False", "True", "False"]):
+            input_data = namespace["_prompt_input"]()
+
+        self.assertEqual(input_data, [[False, True, False]])
+        self.assertEqual(
+            pd.DataFrame(input_data).to_numpy(dtype=float).tolist(),
+            [[0.0, 1.0, 0.0]],
+        )
+
+    def test_tabular_prompt_retries_when_a_feature_value_is_empty(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            integration = PersistentIntegration(project)
+            integration._write_entrypoint(
+                IntegrationManifest(
+                    model_path=str(project / "model.pkl"),
+                    model_info={
+                        "input_type": "Tabular",
+                        "feature_names": ["age", "sex_0"],
+                    },
+                    selector_result={"selected": "SHAP"},
+                    technique="SHAP",
+                )
+            )
+            tree = ast.parse(
+                integration.entrypoint.read_text(encoding="utf-8")
+            )
+            prompt_function = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.FunctionDef)
+                and node.name == "_prompt_input"
+            )
+            namespace = {
+                "INTEGRATION": {
+                    "model_info": {
+                        "input_type": "Tabular",
+                        "feature_names": ["age", "sex_0"],
+                    },
+                },
+                "json": json,
+            }
+            exec(
+                compile(
+                    ast.Module(body=[prompt_function], type_ignores=[]),
+                    str(integration.entrypoint),
+                    "exec",
+                ),
+                namespace,
+            )
+
+        with patch("builtins.input", side_effect=["", "63", "False"]):
+            input_data = namespace["_prompt_input"]()
+
+        self.assertEqual(input_data, [[63, False]])
+
     def test_tabular_background_uses_matching_columns_in_model_order(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
@@ -299,6 +399,31 @@ class ModelFileSelectionTests(unittest.TestCase):
                 model_info["background_data"],
                 [[30, 95], [50, 140], [40, 110]],
             )
+
+    def test_tabular_background_skips_rows_with_missing_feature_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            pd.DataFrame(
+                {
+                    "age": [30, 50, None, 40],
+                    "glucose": [95, 140, 110, None],
+                    "label": [0, 1, 0, 1],
+                }
+            ).to_csv(project / "training_data.csv", index=False)
+            integration = PersistentIntegration(project)
+
+            model_info = integration._resolve_background_data(
+                {
+                    "input_type": "Tabular",
+                    "feature_names": ["age", "glucose"],
+                },
+                {"selected": "SHAP", "alternatives": ["LIME"]},
+            )
+
+        self.assertCountEqual(
+            model_info["background_data"],
+            [[30.0, 95.0], [50.0, 140.0]],
+        )
 
     def test_no_matching_tabular_dataset_leaves_background_unset(self):
         with tempfile.TemporaryDirectory() as directory:
