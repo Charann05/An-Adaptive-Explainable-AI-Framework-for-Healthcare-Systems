@@ -43,16 +43,12 @@ class PyTorchAdapter(ModelAdapter):
     ) -> Any:
 
         import torch
+        from ..prediction_utils import probability_matrix
 
-        output = self.predict(
-            model,
-            input_data,
+        probabilities = probability_matrix(
+            self.predict(model, input_data)
         )
-
-        return torch.softmax(
-            output,
-            dim=-1,
-        )
+        return torch.as_tensor(probabilities)
 
     def get_layers(
         self,

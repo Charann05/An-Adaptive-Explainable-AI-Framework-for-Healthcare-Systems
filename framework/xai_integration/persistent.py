@@ -145,10 +145,21 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
-from framework.xai_integration import load_model, run_explanation
+try:
+    from framework.xai_integration import load_model, run_explanation
+except ModuleNotFoundError as exc:
+    _FRAMEWORK_ROOT = Path({str(Path(__file__).resolve().parents[2])!r})
+    if not (_FRAMEWORK_ROOT / "framework").is_dir():
+        raise
+    sys.path.insert(0, str(_FRAMEWORK_ROOT))
+    try:
+        from framework.xai_integration import load_model, run_explanation
+    except ModuleNotFoundError:
+        raise exc
 
 
 INTEGRATION = {configuration}
@@ -168,6 +179,13 @@ if _CONFIG_PATH.is_file():
 
 def _jsonable(value):
     if hasattr(value, "shape") and getattr(value, "shape", None) != ():
+        if value.size > 1024:
+            return {{
+                "shape": list(value.shape),
+                "min": float(value.min()),
+                "max": float(value.max()),
+                "mean": float(value.mean()),
+            }}
         return value.tolist()
     if hasattr(value, "item"):
         return value.item()
@@ -181,30 +199,35 @@ def _jsonable(value):
 
 
 def _load_image(path: str):
-    try:
-        from src.data import basic_preprocess, get_transforms
-        import cv2
+    preprocess_image = getattr(_CONFIG, "preprocess_image", None)
+    if callable(preprocess_image):
+        return preprocess_image(path)
 
-        image = cv2.imread(path)
-        if image is None:
-            raise FileNotFoundError(f"Could not read image: {{path}}")
-        image = image[:, :, ::-1]
-        image = basic_preprocess(image)
-        return get_transforms(train=False)(image=image)["image"].unsqueeze(0)
-    except ImportError:
-        from PIL import Image
-        import numpy as np
+    from PIL import Image
+    import numpy as np
+
+    image = Image.open(path).convert("RGB")
+    try:
         import torch
 
-        image = Image.open(path).convert("RGB").resize((224, 224))
+        size = getattr(_MODEL, "input_size", 224)
+        if isinstance(size, int):
+            size = (size, size)
+        image = image.resize(size)
         array = np.asarray(image, dtype=np.float32) / 255.0
+        framework = INTEGRATION["model_info"].get("framework", "").lower()
+        if framework in {"tensorflow", "keras"}:
+            return torch.from_numpy(array).unsqueeze(0).numpy()
         return torch.from_numpy(array.transpose(2, 0, 1)).unsqueeze(0)
+    except ImportError:
+        return np.asarray(image, dtype=np.float32)[None, ...] / 255.0
 
 
 def _prompt_input():
     input_type = INTEGRATION["model_info"].get("input_type", "").lower()
     if input_type == "image":
-        return _load_image(input("Enter the image path: ").strip())
+        path = input("Enter the image path: ").strip()
+        return _load_image(path), path
     if input_type == "text":
         return input("Enter the text input: ")
     if input_type == "audio":
@@ -244,7 +267,7 @@ def _prompt_input():
     return parsed
 
 
-def run(input_data: Any):
+def run(input_data: Any, source_image_path: str | None = None):
     preprocess = getattr(_CONFIG, "preprocess", None)
     if callable(preprocess):
         input_data = preprocess(input_data)
@@ -254,7 +277,7 @@ def run(input_data: Any):
         model_info=INTEGRATION["model_info"],
         selector_result=INTEGRATION["selector_result"],
     )
-    return _jsonable({{
+    output = {{
         "prediction": result.prediction,
         "technique_used": result.technique_used,
         "confidence_score": result.confidence_score,
@@ -263,7 +286,8 @@ def run(input_data: Any):
         "metadata": result.metadata,
         "success": result.success,
         "error": result.error,
-    }})
+    }}
+    return _jsonable(output)
 
 
 if __name__ == "__main__":
@@ -276,11 +300,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.input_json is not None:
         input_data = json.loads(args.input_json)
+        source_image_path = None
     elif args.input_image is not None:
         input_data = _load_image(args.input_image)
+        source_image_path = args.input_image
     else:
         input_data = _prompt_input()
-    print(json.dumps(run(input_data), indent=2, default=str))
+        if (
+            isinstance(input_data, tuple)
+            and len(input_data) == 2
+            and isinstance(input_data[1], str)
+        ):
+            input_data, source_image_path = input_data
+        else:
+            source_image_path = None
+    print(
+        json.dumps(
+            run(input_data, source_image_path),
+            indent=2,
+            default=str,
+        )
+    )
 ''',
             encoding="utf-8",
         )

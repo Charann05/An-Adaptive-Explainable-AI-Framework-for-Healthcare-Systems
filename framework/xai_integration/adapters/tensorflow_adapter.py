@@ -53,31 +53,27 @@ class TensorFlowAdapter(ModelAdapter):
         model: Any,
     ) -> list[tuple[str, Any]]:
 
-        return [
-            (layer.name, layer)
-            for layer in model.layers
-        ]
+        layers = []
+
+        def collect(parent, prefix=""):
+            for layer in parent.layers:
+                name = f"{prefix}{layer.name}"
+                layers.append((name, layer))
+                if hasattr(layer, "layers"):
+                    collect(layer, name + "/")
+
+        collect(model)
+        return layers
 
     def get_last_conv_layer(
         self,
         model: Any,
     ) -> tuple[Any, str]:
 
-        for layer in reversed(
-            model.layers
-        ):
-
-            class_name = (
-                layer.__class__
-                .__name__
-                .lower()
-            )
-
+        for name, layer in reversed(self.get_layers(model)):
+            class_name = layer.__class__.__name__.lower()
             if "conv" in class_name:
-                return (
-                    layer,
-                    layer.name,
-                )
+                return layer, name
 
         raise ValueError(
             "No convolutional layer found "
