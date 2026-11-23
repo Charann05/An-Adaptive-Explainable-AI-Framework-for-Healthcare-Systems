@@ -49,8 +49,24 @@ def display_gradcam(
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     figure, axis = plt.subplots()
-    axis.imshow(image)
-    overlay = axis.imshow(attribution, cmap="jet", alpha=0.4)
+    image_extent = (
+        -0.5,
+        image.shape[1] - 0.5,
+        image.shape[0] - 0.5,
+        -0.5,
+    )
+    axis.imshow(
+        image,
+        interpolation="bilinear",
+        extent=image_extent,
+    )
+    overlay = axis.imshow(
+        attribution,
+        cmap="jet",
+        alpha=0.35,
+        interpolation="bilinear",
+        extent=image_extent,
+    )
     axis.set_title(title)
     axis.axis("off")
     figure.colorbar(overlay, ax=axis, fraction=0.046, pad=0.04)

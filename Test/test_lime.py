@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
 if __package__:
@@ -14,6 +14,214 @@ MODEL_PATH = Path(__file__).with_name("test_rf_model.pkl")
 
 
 class LIMEIntegrationTests(unittest.TestCase):
+    def test_tabular_predictions_keep_class_columns_stable(self):
+        import numpy as np
+
+        observed = {}
+
+        class FakeExplanation:
+            def as_list(self):
+                return [
+                    ("age > 61.00", 0.1),
+                    ("203.25 < chol <= 237.50", 0.2),
+                    ("ca <= 0.00", 0.3),
+                ]
+
+        class FakeLimeTabularExplainer:
+            def __init__(self, **kwargs):
+                pass
+
+            def explain_instance(self, instance, predict_fn, *, num_features):
+                observed["probabilities"] = predict_fn(
+                    np.array([[0.2, 0.3], [0.4, 0.5]])
+                )
+                return FakeExplanation()
+
+        class FakeAdapter:
+            framework = "sklearn"
+
+            def predict_proba(self, model, input_data):
+                raise NotImplementedError
+
+            def predict(self, model, input_data):
+                return np.zeros(len(input_data), dtype=int)
+
+        fake_lime = SimpleNamespace(
+            lime_tabular=SimpleNamespace(
+                LimeTabularExplainer=FakeLimeTabularExplainer,
+            ),
+        )
+        model = SimpleNamespace(classes_=np.array([0, 1]))
+
+        with patch.dict(
+            "sys.modules",
+            {
+                "lime": fake_lime,
+                "lime.lime_tabular": fake_lime.lime_tabular,
+            },
+        ):
+            result = LIMEPlugin()._explain_tabular(
+                model,
+                [[0.1, 0.2]],
+                {
+                    "input_type": "Tabular",
+                    "task": "Classification",
+                    "feature_names": ["a", "b"],
+                    "background_data": [[0.0, 0.0], [1.0, 1.0]],
+                },
+                FakeAdapter(),
+            )
+
+        np.testing.assert_array_equal(
+            observed["probabilities"],
+            [[1.0, 0.0], [1.0, 0.0]],
+        )
+        self.assertEqual(result.prediction, 0)
+        self.assertEqual(
+            [item["feature"] for item in result.feature_ranking],
+            [
+                "age",
+                "chol",
+                "ca",
+            ],
+        )
+
+        from adaptive_xai.explanation_generator.generator import (
+            format_xai_output,
+        )
+
+        output = format_xai_output(
+            {
+                "technique_used": result.technique_used,
+                "prediction": result.prediction,
+                "feature_ranking": result.feature_ranking,
+            },
+            "Tabular",
+        )
+        self.assertNotRegex(output, r"[<>]=?")
+
+        from adaptive_xai.xai_integration.visualization import (
+            display_tabular_attributions,
+        )
+
+        observed = {}
+
+        class FakeAxis:
+            def barh(self, *args, **kwargs):
+                pass
+
+            def set_yticks(self, positions, *, labels):
+                observed["labels"] = labels
+
+            def invert_yaxis(self):
+                pass
+
+            def axvline(self, *args, **kwargs):
+                pass
+
+            def set_xlabel(self, *args, **kwargs):
+                pass
+
+            def set_title(self, *args, **kwargs):
+                pass
+
+            def grid(self, *args, **kwargs):
+                pass
+
+            def set_axisbelow(self, *args, **kwargs):
+                pass
+
+        class FakeFigure:
+            def tight_layout(self):
+                pass
+
+            def savefig(self, *args, **kwargs):
+                pass
+
+        fake_matplotlib = ModuleType("matplotlib")
+        fake_matplotlib.__path__ = []
+        fake_matplotlib.get_backend = lambda: "agg"
+        fake_pyplot = ModuleType("matplotlib.pyplot")
+        fake_pyplot.subplots = lambda **kwargs: (FakeFigure(), FakeAxis())
+        fake_pyplot.close = lambda figure: None
+        fake_matplotlib.pyplot = fake_pyplot
+        with patch.dict(
+            "sys.modules",
+            {
+                "matplotlib": fake_matplotlib,
+                "matplotlib.pyplot": fake_pyplot,
+            },
+        ):
+            display_tabular_attributions(
+                result.feature_ranking,
+                "unused.png",
+                "Feature contributions",
+            )
+        self.assertEqual(observed["labels"], ["age", "chol", "ca"])
+
+    def test_tabular_lime_wraps_samples_as_dataframe_for_named_models(self):
+        import numpy as np
+        import pandas as pd
+
+        observed = []
+
+        class FakeExplanation:
+            def as_list(self):
+                return [("age > 30", 0.1)]
+
+        class FakeLimeTabularExplainer:
+            def __init__(self, *, training_data, feature_names, **kwargs):
+                self.feature_names = feature_names
+                self.training_data = training_data
+
+            def explain_instance(self, instance, predict_fn, *, num_features):
+                predict_fn(np.array([[20, 120], [30, 130]]))
+                return FakeExplanation()
+
+        class FakeAdapter:
+            framework = "sklearn"
+
+            def predict_proba(self, model, input_data):
+                observed.append(input_data)
+                return np.tile([[0.8, 0.2]], (len(input_data), 1))
+
+            def predict(self, model, input_data):
+                observed.append(input_data)
+                return np.zeros(len(input_data), dtype=int)
+
+        fake_lime = SimpleNamespace(
+            lime_tabular=SimpleNamespace(
+                LimeTabularExplainer=FakeLimeTabularExplainer,
+            ),
+        )
+        model = SimpleNamespace(
+            feature_names_in_=np.array(["age", "glucose"]),
+            classes_=np.array([0, 1]),
+        )
+        with patch.dict(
+            "sys.modules",
+            {
+                "lime": fake_lime,
+                "lime.lime_tabular": fake_lime.lime_tabular,
+            },
+        ):
+            result = LIMEPlugin()._explain_tabular(
+                model,
+                [[25, 125]],
+                {
+                    "input_type": "Tabular",
+                    "task": "Classification",
+                    "background_data": [[20, 120], [30, 130]],
+                },
+                FakeAdapter(),
+            )
+
+        self.assertEqual(result.prediction, 0)
+        self.assertEqual(len(observed), 2)
+        self.assertTrue(all(isinstance(value, pd.DataFrame) for value in observed))
+        self.assertEqual(list(observed[0].columns), ["age", "glucose"])
+        self.assertEqual(list(observed[1].columns), ["age", "glucose"])
+
     def test_image_explainer_uses_channels_first_for_pytorch_batches(self):
         import numpy as np
 

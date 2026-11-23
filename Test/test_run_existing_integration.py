@@ -12,9 +12,27 @@ else:
     import _bootstrap
 
 from adaptive_xai import run
+from adaptive_xai.cli_display import print_explanation_error
 
 
 class ExistingIntegrationStartupTests(unittest.TestCase):
+    def test_image_explanation_error_requests_image_background_data(self):
+        output = StringIO()
+
+        with redirect_stdout(output):
+            print_explanation_error(
+                ValueError(
+                    "SHAP GradientExplainer requires representative "
+                    "background_data distinct from the explained input."
+                ),
+                "Image",
+            )
+
+        message = output.getvalue()
+        self.assertIn("IMAGE EXPLANATION BACKGROUND DATA REQUIRED", message)
+        self.assertIn("representative background images", message)
+        self.assertNotIn("tabular SHAP or LIME", message)
+
     def test_setup_prompts_and_persists_missing_tabular_feature_metadata(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
@@ -167,7 +185,10 @@ class ExistingIntegrationStartupTests(unittest.TestCase):
                 patch.object(
                     run,
                     "select_xai",
-                    return_value={"selected": "SHAP", "alternatives": []},
+                    return_value={
+                        "selected": "GradCAM",
+                        "alternatives": ["SHAP", "LIME"],
+                    },
                 ),
                 patch.object(
                     run,
@@ -182,6 +203,18 @@ class ExistingIntegrationStartupTests(unittest.TestCase):
 
             self.assertIn("preprocess_input()", output.getvalue())
             self.assertIn("python adap_xai.py", output.getvalue())
+            self.assertIn(
+                "If GradCAM cannot produce an explanation for an input",
+                output.getvalue(),
+            )
+            self.assertEqual(
+                output.getvalue().count("will try the alternatives"),
+                1,
+            )
+            self.assertLess(
+                output.getvalue().index("will try the alternatives"),
+                output.getvalue().index("Run the integrated project"),
+            )
 
     def test_dependency_install_failure_stops_setup(self):
         with tempfile.TemporaryDirectory() as directory:

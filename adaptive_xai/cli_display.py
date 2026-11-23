@@ -180,17 +180,36 @@ def print_model_load_error(error):
     if detail:
         print(f"Details: {detail}")
 
-def print_explanation_error(error):
+def print_explanation_error(error, input_type=None):
     detail = str(error)
     if "background_data" in detail.lower():
-        title = "EXPLANATION BACKGROUND DATA REQUIRED"
-        message = (
-            "The selected tabular SHAP or LIME explanation needs representative "
-            "background rows. Add a matching CSV/Excel dataset to the project, "
-            "or edit BACKGROUND_DATA in adap_xai.py with rows in the same "
-            "feature order the model expects. The framework will not invent "
-            "or modify model inputs."
-        )
+        if str(input_type or "").strip().lower() == "image":
+            title = "IMAGE EXPLANATION BACKGROUND DATA REQUIRED"
+            message = (
+                "The SHAP image explanation needs representative background "
+                "images with the same dimensions, channel order, and "
+                "preprocessing as the model input. Set BACKGROUND_DATA in "
+                "adap_xai.py to a batch of those images. The framework will "
+                "not invent or modify model inputs."
+            )
+        elif str(input_type or "").strip().lower() == "tabular":
+            title = "EXPLANATION BACKGROUND DATA REQUIRED"
+            message = (
+                "The selected tabular SHAP or LIME explanation needs "
+                "representative background rows. Add a matching CSV/Excel "
+                "dataset to the project, or edit BACKGROUND_DATA in "
+                "adap_xai.py with rows in the same feature order the model "
+                "expects. The framework will not invent or modify model "
+                "inputs."
+            )
+        else:
+            title = "EXPLANATION BACKGROUND DATA REQUIRED"
+            message = (
+                "The selected XAI technique needs representative background "
+                "inputs that match the model's expected format. Set "
+                "BACKGROUND_DATA in adap_xai.py. The framework will not "
+                "invent or modify model inputs."
+            )
     else:
         title = "EXPLANATION FAILED"
         message = (

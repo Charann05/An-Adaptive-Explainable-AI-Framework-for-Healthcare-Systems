@@ -386,6 +386,14 @@ def run_project(project_root, final_evidence=None, report_path=None):
         print_status(
             f"XAI integration created at {integration.entrypoint}"
         )
+        alternatives = result.get("alternatives") or []
+        if alternatives:
+            print_step(
+                f"If {selected_xai} cannot produce an explanation for an "
+                f"input, adap_xai.py will try the alternatives "
+                f"({', '.join(alternatives)}). Check the Technique field in "
+                "the result to see which method was actually used."
+            )
         print_step(
             "To change the model file later, edit MODEL_PATH in adap_xai.py."
         )

@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -22,6 +22,69 @@ MODEL_PATH = Path(__file__).with_name("test_cnn_model.pt")
 
 
 class GradCAMIntegrationTests(unittest.TestCase):
+    def test_gradcam_visualization_saves_overlaid_image_at_requested_path(self):
+        from adaptive_xai.xai_integration.visualization import display_gradcam
+
+        observed = {"images": []}
+
+        class FakeAxis:
+            def imshow(self, image, **kwargs):
+                observed["images"].append((image, kwargs))
+                return image
+
+            def set_title(self, title):
+                pass
+
+            def axis(self, setting):
+                pass
+
+        class FakeFigure:
+            def colorbar(self, *args, **kwargs):
+                pass
+
+            def tight_layout(self):
+                pass
+
+            def savefig(self, path, **kwargs):
+                Path(path).write_bytes(b"image")
+
+        fake_matplotlib = ModuleType("matplotlib")
+        fake_matplotlib.__path__ = []
+        fake_matplotlib.get_backend = lambda: "agg"
+        fake_pyplot = ModuleType("matplotlib.pyplot")
+        fake_pyplot.subplots = lambda: (FakeFigure(), FakeAxis())
+        fake_pyplot.close = lambda figure: None
+        fake_matplotlib.pyplot = fake_pyplot
+
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = Path(directory) / "gradcam_explanation.png"
+            with patch.dict(
+                sys.modules,
+                {
+                    "matplotlib": fake_matplotlib,
+                    "matplotlib.pyplot": fake_pyplot,
+                },
+            ):
+                saved_path = display_gradcam(
+                    np.full((1, 8, 8, 3), 0.5, dtype=np.float32),
+                    np.ones((2, 2), dtype=np.float32),
+                    output_path,
+                    "Grad-CAM explanation",
+                )
+
+            self.assertEqual(saved_path, output_path.resolve())
+            self.assertTrue(saved_path.is_file())
+            self.assertEqual(len(observed["images"]), 2)
+            self.assertEqual(
+                observed["images"][0][1]["extent"],
+                observed["images"][1][1]["extent"],
+            )
+            self.assertEqual(
+                observed["images"][1][1]["interpolation"],
+                "bilinear",
+            )
+            self.assertEqual(observed["images"][1][1]["alpha"], 0.35)
+
     def test_visualization_module_imports_without_matplotlib(self):
         from adaptive_xai.xai_integration import visualization
 

@@ -128,6 +128,11 @@ class ModelFileSelectionTests(unittest.TestCase):
                 "INTEGRATION": {
                     "model_info": {"framework": "tensorflow"},
                 },
+                "_MODEL": type(
+                    "Model",
+                    (),
+                    {"input_shape": (None, 200, 200, 3)},
+                )(),
             }
             exec(
                 compile(
@@ -141,8 +146,16 @@ class ModelFileSelectionTests(unittest.TestCase):
             Image.new("RGB", (4, 4), (255, 0, 0)).save(image_path)
             loaded_image = namespace["_load_image"](str(image_path))
 
-            self.assertEqual(loaded_image.shape, (1, 224, 224, 3))
+            self.assertEqual(loaded_image.shape, (1, 200, 200, 3))
             self.assertEqual(loaded_image[0, 0, 0].tolist(), [1.0, 0.0, 0.0])
+
+            namespace["_MODEL"] = type(
+                "DynamicShapeModel",
+                (),
+                {"input_shape": (None, None, None, 3)},
+            )()
+            default_size_image = namespace["_load_image"](str(image_path))
+            self.assertEqual(default_size_image.shape, (1, 224, 224, 3))
 
     def test_lists_matching_files_in_existing_preference_order(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -238,6 +251,7 @@ class ModelFileSelectionTests(unittest.TestCase):
                 "display_tabular_attributions(",
                 generated_source,
             )
+            self.assertNotIn("print_fallback_notice(", generated_source)
             self.assertLess(
                 generated_source.index("VISUALIZATION_PATH.unlink(missing_ok=True)"),
                 generated_source.index("MODEL_PATH = Path(INTEGRATION"),
@@ -248,6 +262,10 @@ class ModelFileSelectionTests(unittest.TestCase):
             )
             self.assertIn("BACKGROUND_DATA =", generated_source)
             self.assertIn("format_xai_output", generated_source)
+            self.assertIn(
+                "Grad-CAM visualization saved to",
+                generated_source,
+            )
             self.assertIn(
                 "print(format_xai_output(output, input_type, visualization_path))",
                 generated_source,

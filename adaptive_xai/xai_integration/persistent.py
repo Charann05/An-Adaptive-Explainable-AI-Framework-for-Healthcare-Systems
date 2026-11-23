@@ -281,7 +281,11 @@ from adaptive_xai.explanation_generator.generator import (
     format_explanation,
     format_xai_output,
 )
-from adaptive_xai.cli_display import print_explanation_error, print_model_load_error
+from adaptive_xai.cli_display import (
+    print_explanation_error,
+    print_model_load_error,
+    print_status,
+)
 
 
 INTEGRATION = {configuration}
@@ -296,8 +300,8 @@ if __name__ == "__main__":
     TABULAR_VISUALIZATION_PATH.unlink(missing_ok=True)
 # Change this path to use a different model file.
 MODEL_PATH = Path(INTEGRATION["model_path"])
-# Replace this with representative tabular rows if automatic discovery missed
-# your dataset. SHAP and LIME use this data as explanation background.
+# Replace this with representative inputs if automatic discovery missed
+# your dataset. SHAP uses this data as explanation background.
 BACKGROUND_DATA = INTEGRATION["model_info"].get("background_data")
 if not MODEL_PATH.is_absolute():
     MODEL_PATH = Path(__file__).parent / MODEL_PATH
@@ -367,7 +371,17 @@ def _load_image(path: str):
     from PIL import Image
     import numpy as np
 
-    image = Image.open(path).convert("RGB").resize((224, 224))
+    image_size = (224, 224)
+    if framework in {{"tensorflow", "keras"}}:
+        model_input_shape = getattr(_MODEL, "input_shape", None)
+        if isinstance(model_input_shape, list) and len(model_input_shape) == 1:
+            model_input_shape = model_input_shape[0]
+        if model_input_shape is not None and len(model_input_shape) == 4:
+            model_height, model_width = model_input_shape[1:3]
+            if model_height is not None and model_width is not None:
+                image_size = (int(model_width), int(model_height))
+
+    image = Image.open(path).convert("RGB").resize(image_size)
     array = np.asarray(image, dtype=np.float32) / 255.0
     if framework in {{"tensorflow", "keras"}}:
         return array[np.newaxis, ...]
@@ -464,7 +478,10 @@ if __name__ == "__main__":
     try:
         output = run(input_data)
     except ExplanationExecutionError as error:
-        print_explanation_error(error)
+        print_explanation_error(
+            error,
+            INTEGRATION["model_info"].get("input_type"),
+        )
         raise SystemExit(1) from error
     if output["technique_used"] == "GradCAM":
         visualization_path = display_gradcam(
@@ -472,6 +489,9 @@ if __name__ == "__main__":
             output["raw_output"],
             VISUALIZATION_PATH,
             f"Grad-CAM explanation for prediction {{output['prediction']}}",
+        )
+        print_status(
+            f"Grad-CAM visualization saved to {{visualization_path}}"
         )
         output["visualization"] = {{
             "type": "Grad-CAM overlay",
